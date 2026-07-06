@@ -80,3 +80,24 @@ def display_limits(image, config=None, method=None):
         return vmin, vmax
 
     raise ValueError(f"Unknown contrast method: {method}")
+
+def apply_stretch(image, vmin=None, vmax=None, stretch="linear"):
+    """Return display-scaled image after optional linear/sqrt/log stretch."""
+    arr = np.asarray(image, dtype=float)
+
+    if vmin is None:
+        vmin = np.nanmin(arr)
+    if vmax is None:
+        vmax = np.nanmax(arr)
+
+    scaled = (arr - vmin) / max(vmax - vmin, 1e-12)
+    scaled = np.clip(scaled, 0.0, 1.0)
+
+    if stretch == "linear":
+        return scaled
+    if stretch == "sqrt":
+        return np.sqrt(scaled)
+    if stretch == "log":
+        return np.log1p(1000.0 * scaled) / np.log1p(1000.0)
+
+    raise ValueError(f"Unknown stretch: {stretch}")

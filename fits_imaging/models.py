@@ -35,16 +35,52 @@ class ImagingResults:
     def title(self) -> str:
         return f"{self.object_name}   {self.camera}  {self.exposure_sec:.3f} sec"
         
+#    @property
+#    def nstars(self) -> int:
+#        return 0 if self.peaks is None else len(self.peaks)
+
+#    @property
+#    def brightest_peak(self):
+#        if self.peaks is None or len(self.peaks) == 0:
+#            return None
+#        peaks = np.asarray(self.peaks)
+#        return peaks[np.argmax(peaks[:, 5])]
+
+#    @property
+#    def background_mean(self) -> float:
+#        return float(self.stats.get("mean", np.nan))
+
+#    @property
+#    def background_sigma(self) -> float:
+#        return float(self.stats.get("std", self.stats.get("sigma", np.nan)))
+
+#    @property
+#    def median_background(self) -> float:
+3        return float(self.stats.get("median", np.nan))
+
+    @property
+    def peak_array(self):
+        return np.asarray(self.peaks) if self.peaks is not None else np.empty((0, 6))
+
     @property
     def nstars(self) -> int:
-        return 0 if self.peaks is None else len(self.peaks)
+        return len(self.peak_array)
 
     @property
     def brightest_peak(self):
-        if self.peaks is None or len(self.peaks) == 0:
+        peaks = self.peak_array
+        if len(peaks) == 0 or peaks.shape[1] < 6:
             return None
-        peaks = np.asarray(self.peaks)
         return peaks[np.argmax(peaks[:, 5])]
+
+    @property
+    def brightest_flux(self) -> float:
+        peak = self.brightest_peak
+        return float("nan") if peak is None else float(peak[5])
+
+    @property
+    def median_background(self) -> float:
+        return float(self.stats.get("median", np.nan))
 
     @property
     def background_mean(self) -> float:
@@ -55,5 +91,12 @@ class ImagingResults:
         return float(self.stats.get("std", self.stats.get("sigma", np.nan)))
 
     @property
-    def median_background(self) -> float:
-        return float(self.stats.get("median", np.nan))
+    def median_sigma_pixels(self) -> float:
+        peaks = self.peak_array
+        if len(peaks) == 0 or peaks.shape[1] < 5:
+            return float("nan")
+        return float(np.nanmedian(0.5 * (peaks[:, 3] + peaks[:, 4])))
+
+    @property
+    def median_fwhm_pixels(self) -> float:
+        return 2.3548 * self.median_sigma_pixels

@@ -26,3 +26,20 @@ def analyze_fits_file(path, peak_separation=10.0, peak_sharp=0.2, maxsources=400
         "pa_calc_deg": parallactic_pa_from_altaz(record.alt_deg, record.az_deg) if record.alt_deg or record.az_deg else 0.0,
     }
     return record, image, peaks_array, stats
+    
+from pathlib import Path
+from .models import ImagingResults
+
+def analyze_image(image_path, config):
+    """Analyze one FITS image and return an ImagingResults object."""
+    record, image, imagec, peaksarray, stats = analyze_fits_file(image_path, config)
+
+    return ImagingResults(
+        image_path=Path(image_path),
+        image=image,
+        convolved_image=imagec,
+        record=record,
+        peaks=peaksarray,
+        stats=stats,
+        header=getattr(record, "header", None),
+    )

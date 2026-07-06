@@ -7,7 +7,7 @@ import numpy as np
 
 from . import plot_style as style
 
-from .contrast import display_limits
+from .contrast import display_limits, apply_stretch
 
 def _peak_xy(peak):
     """Return x, y from either a FitPeak object or a numeric peak row."""
@@ -39,7 +39,16 @@ def plot_image_with_peaks(
     fig, ax = plt.subplots(figsize=figsize)
 
     vmin, vmax = display_limits(image, config=config)
-    ax.imshow(image, origin="lower", vmin=vmin, vmax=vmax)
+    stretch = getattr(config, "stretch", "linear")
+    display_image = apply_stretch(image, vmin=vmin, vmax=vmax, stretch=stretch)
+
+    cmap = getattr(config, "colormap", "viridis")
+
+    if getattr(config, "invert_colormap", False):
+        if not cmap.endswith("_r"):
+            cmap += "_r"
+            
+    ax.imshow(display_image, origin="lower", cmap=cmap, vmin=0, vmax=1)
     
     ax.set_title(title, fontsize=style.MAIN_TITLE_SIZE)
     ax.set_xlabel("X pixel", fontsize=style.MAIN_LABEL_SIZE)

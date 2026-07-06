@@ -22,8 +22,19 @@ class ImagingConfig:
     peak_separation: float = 10.0
 
     # Display
-    contrast_method: str = "zscale"      # "zscale", "percentile", "sigma", "manual"
-    contrast_percentiles: tuple = (1.0, 99.7)
+    contrast_method: str = "zscale"
+    contrast_percentiles: tuple = (1.0, 99.8)
     contrast_sigma: float = 5.0
-    manual_vmin: Optional[float] = None
-    manual_vmax: Optional[float] = None
+    stretch: str = "sqrt"
+
+    show_grid = True
+    show_peak_labels = True
+    show_center_cross = True
+    show_peak_circles = False
+
+    colormap: str = "viridis"      # Default Matplotlib colormap
+    invert_colormap: bool = False
+    invert_gray: bool = False
+    histogram_max_points: int = 2_000_000
+    histogram_bins: int = 200
+    
