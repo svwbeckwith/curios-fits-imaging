@@ -183,3 +183,36 @@ class ImagingResults:
             swarpfac=swarpfac,
             **kwargs,
         )
+        
+    @property
+    def fwhm_pixels(self):
+        from .diagnostics import peak_fwhm_pixels
+        return peak_fwhm_pixels(self.peaks)
+
+    def radial_profile(self, peak_index=0, rmax=20, binsize=1.0):
+        from .diagnostics import radial_profile
+
+        peaks = self.peak_array
+        if len(peaks) == 0:
+            raise ValueError("No peaks available")
+
+        x, y = peaks[peak_index, 0], peaks[peak_index, 1]
+        return radial_profile(self.display_image, x, y, rmax=rmax, binsize=binsize)
+
+    def source_statistics(self):
+        from .diagnostics import source_statistics
+        return source_statistics(self.peaks)
+
+    def export_csv(self, path, config=None):
+        from .export import export_peak_csv
+
+        zero_mag_counts = getattr(config, "zero_mag_counts", 1.0)
+        pixel_arcsec = getattr(config, "pixel_arcsec", None)
+
+        return export_peak_csv(
+            path,
+            self.peaks,
+            exposure_sec=self.exposure_sec,
+            zero_mag_counts=zero_mag_counts,
+            pixel_arcsec=pixel_arcsec,
+        )
