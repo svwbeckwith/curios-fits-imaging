@@ -55,6 +55,8 @@ def plot_image_with_peaks(
     ax.set_ylabel("Y pixel", fontsize=style.MAIN_LABEL_SIZE)
     ax.tick_params(labelsize=style.MAIN_TICK_SIZE)
 
+    ax.invert_yaxis()
+    
     ax.minorticks_on()
     ax.grid(
         True,
