@@ -1,22 +1,29 @@
+"""Configuration for FITS imaging analysis."""
+
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
+
 
 @dataclass
 class ImagingConfig:
-    """Configuration values used by the cleaned FITS imaging notebook."""
-    telescope: str = "90mm SVBony telescope"
-    pixel_um: float = 3.76
-    pixel_arcsec: float = 1.55
-    xformat: int = 9576
-    yformat: int = 6380
-    maxcounts: int = 65535
-    aperture_cm: float = 9.0
-    focal_length_cm: float = 50.0
-    zero_mag_counts: float = 115_000_000.0
-    latitude_deg: float = 37.78111
-    longitude_deg: float = -122.39139
-    data_root: Path = Path.cwd() / "Data"
+    """User-adjustable configuration values."""
 
-    @property
-    def figures_dir(self) -> Path:
-        return Path(self.data_root) / "Figures"
+    # Change this on each computer.
+    data_root: Path = Path("~/Dropbox/CuRIOS/Software/DataDirectories").expanduser()
+
+    # Photometry
+    zero_mag_counts: float = 115000000
+    pixel_arcsec: float = 1.24
+
+    # Peak finding
+    threshold_sigma: float = 5.0
+    max_peaks: int = 1000
+    peak_separation: float = 10.0
+
+    # Display
+    contrast_method: str = "zscale"      # "zscale", "percentile", "sigma", "manual"
+    contrast_percentiles: tuple = (1.0, 99.7)
+    contrast_sigma: float = 5.0
+    manual_vmin: Optional[float] = None
+    manual_vmax: Optional[float] = None

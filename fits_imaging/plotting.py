@@ -7,6 +7,7 @@ import numpy as np
 
 from . import plot_style as style
 
+from .contrast import display_limits
 
 def _peak_xy(peak):
     """Return x, y from either a FitPeak object or a numeric peak row."""
@@ -27,6 +28,7 @@ def plot_image_with_peaks(
     save_path=None,
     flagcirc=False,
     figsize=(16, 16),
+    config=None,
 ):
     """Plot full image with optional peak labels.
 
@@ -36,7 +38,7 @@ def plot_image_with_peaks(
     """
     fig, ax = plt.subplots(figsize=figsize)
 
-    vmin, vmax = np.percentile(image[np.isfinite(image)], [1, 99.7])
+    vmin, vmax = display_limits(image, config=config)
     ax.imshow(image, origin="lower", vmin=vmin, vmax=vmax)
     
     ax.set_title(title, fontsize=style.MAIN_TITLE_SIZE)
@@ -172,7 +174,7 @@ def plot_histogram(
     xlabel="Value",
     ylabel="Count",
     figsize=(8, 6),
-    max_points=1_000_000,
+    max_points=5_000_000,
     percentile_clip=(0.1, 99.9),
 ):
     """Plot a histogram, sampling large images to avoid slow notebook plots."""
