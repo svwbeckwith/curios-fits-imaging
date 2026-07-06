@@ -9,7 +9,7 @@ import numpy as np
 
 @dataclass
 class ImagingResults:
-    """Container for one analyzed FITS image."""
+    """Container and convenience interface for one analyzed FITS image."""
 
     image_path: Path
     image: np.ndarray
@@ -21,57 +21,70 @@ class ImagingResults:
 
     @property
     def object_name(self) -> str:
-        return getattr(self.record, "object_name", "")
-
-    @property
-    def exposure_sec(self) -> float:
-        return float(getattr(self.record, "exposure_sec", 0.0))
+        return str(getattr(self.record, "object_name", ""))
 
     @property
     def camera(self) -> str:
-        return getattr(self.record, "camera", "")
+        return str(getattr(self.record, "camera", ""))
+
+    @property
+    def exposure_sec(self) -> float:
+        return float(getattr(self.record, "exposure_sec", np.nan))
+
+    @property
+    def softname(self) -> str:
+        return str(getattr(self.record, "softname", ""))
 
     @property
     def title(self) -> str:
         return f"{self.object_name}   {self.camera}  {self.exposure_sec:.3f} sec"
-        
-#    @property
-#    def nstars(self) -> int:
-#        return 0 if self.peaks is None else len(self.peaks)
-
-#    @property
-#    def brightest_peak(self):
-#        if self.peaks is None or len(self.peaks) == 0:
-#            return None
-#        peaks = np.asarray(self.peaks)
-#        return peaks[np.argmax(peaks[:, 5])]
-
-#    @property
-#    def background_mean(self) -> float:
-#        return float(self.stats.get("mean", np.nan))
-
-#    @property
-#    def background_sigma(self) -> float:
-#        return float(self.stats.get("std", self.stats.get("sigma", np.nan)))
-
-#    @property
-#    def median_background(self) -> float:
-3        return float(self.stats.get("median", np.nan))
 
     @property
-    def peak_array(self):
-        return np.asarray(self.peaks) if self.peaks is not None else np.empty((0, 6))
+    def display_image(self) -> np.ndarray:
+        """Preferred image for display, using convolved image if available."""
+        return self.convolved_image if self.convolved_image is not None else self.image
+
+    @property
+    def peak_array(self) -> np.ndarray:
+        """Return peaks as a 2-D NumPy array.
+
+        Expected columns are:
+            x, y, area, sx, sy, flux
+        """
+        if self.peaks is None:
+            return np.empty((0, 6), dtype=float)
+
+        arr = np.asarray(self.peaks)
+
+        if arr.size == 0:
+            return np.empty((0, 6), dtype=float)
+
+        if arr.ndim == 1:
+            arr = arr.reshape(1, -1)
+
+        return arr
 
     @property
     def nstars(self) -> int:
-        return len(self.peak_array)
+        return int(len(self.peak_array))
 
     @property
     def brightest_peak(self):
         peaks = self.peak_array
+
         if len(peaks) == 0 or peaks.shape[1] < 6:
             return None
-        return peaks[np.argmax(peaks[:, 5])]
+
+        flux = peaks[:, 5]
+        good = np.isfinite(flux)
+
+        if not np.any(good):
+            return None
+
+        good_indices = np.where(good)[0]
+        best_index = good_indices[np.argmax(flux[good])]
+
+        return peaks[best_index]
 
     @property
     def brightest_flux(self) -> float:
@@ -91,12 +104,36 @@ class ImagingResults:
         return float(self.stats.get("std", self.stats.get("sigma", np.nan)))
 
     @property
+    def image_min(self) -> float:
+        return float(np.nanmin(self.image))
+
+    @property
+    def image_max(self) -> float:
+        return float(np.nanmax(self.image))
+
+    @property
+    def image_shape(self):
+        return self.image.shape
+
+    @property
     def median_sigma_pixels(self) -> float:
         peaks = self.peak_array
+
         if len(peaks) == 0 or peaks.shape[1] < 5:
             return float("nan")
-        return float(np.nanmedian(0.5 * (peaks[:, 3] + peaks[:, 4])))
+
+        sigma_mean = 0.5 * (peaks[:, 3] + peaks[:, 4])
+        return float(np.nanmedian(sigma_mean))
 
     @property
     def median_fwhm_pixels(self) -> float:
         return 2.3548 * self.median_sigma_pixels
+
+    @property
+    def brightest_xy(self):
+        peak = self.brightest_peak
+
+        if peak is None or len(peak) < 2:
+            return None
+
+        return float(peak[0]), float(peak[1])

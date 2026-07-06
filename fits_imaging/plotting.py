@@ -48,7 +48,7 @@ def plot_image_with_peaks(
         if not cmap.endswith("_r"):
             cmap += "_r"
             
-    ax.imshow(display_image, origin="lower", cmap=cmap, vmin=0, vmax=1)
+    ax.imshow(display_image, origin="lower", vmin=0, vmax=1)
     
     ax.set_title(title, fontsize=style.MAIN_TITLE_SIZE)
     ax.set_xlabel("X pixel", fontsize=style.MAIN_LABEL_SIZE)

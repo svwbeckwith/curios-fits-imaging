@@ -20,11 +20,28 @@ def percentile_limits(image, percentiles=(1.0, 99.7), max_points=1_000_000):
     return tuple(np.percentile(arr, percentiles))
 
 
-def sigma_limits(image, nsigma=5.0, max_points=1_000_000):
+def sigma_limits(image, nsigma=5.0, nsigma_low=None, nsigma_high=None, max_points=1_000_000):
+    """Return median-based sigma display limits.
+
+    Default symmetric form:
+        median ± nsigma*sigma
+
+    Asymmetric form:
+        median - nsigma_low*sigma
+        median + nsigma_high*sigma
+    """
     arr = finite_sample(image, max_points=max_points)
+
     med = np.median(arr)
     sig = 1.4826 * np.median(np.abs(arr - med))
-    return med - nsigma * sig, med + nsigma * sig
+
+    if nsigma_low is None:
+        nsigma_low = nsigma
+
+    if nsigma_high is None:
+        nsigma_high = nsigma
+
+    return med - nsigma_low * sig, med + nsigma_high * sig
 
 
 def zscale_limits(image, contrast=0.25, max_points=600_000):
@@ -70,7 +87,15 @@ def display_limits(image, config=None, method=None):
 
     if method == "sigma":
         nsigma = getattr(config, "contrast_sigma", 5.0)
-        return sigma_limits(image, nsigma)
+        nsigma_low = getattr(config, "contrast_sigma_low", nsigma)
+        nsigma_high = getattr(config, "contrast_sigma_high", nsigma)
+
+        return sigma_limits(
+            image,
+            nsigma=nsigma,
+            nsigma_low=nsigma_low,
+            nsigma_high=nsigma_high,
+        )
 
     if method == "manual":
         vmin = getattr(config, "manual_vmin", None)

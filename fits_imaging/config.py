@@ -22,10 +22,11 @@ class ImagingConfig:
     peak_separation: float = 10.0
 
     # Display
-    contrast_method: str = "zscale"
+    contrast_method: str = "sigma"
     contrast_percentiles: tuple = (1.0, 99.8)
-    contrast_sigma: float = 5.0
-    stretch: str = "sqrt"
+    contrast_sigma_low: float = 1.0
+    contrast_sigma_high: float = 5.0
+    stretch: str = "linear"
 
     show_grid = True
     show_peak_labels = True
