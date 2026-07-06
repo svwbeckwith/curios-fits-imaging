@@ -32,7 +32,20 @@ from .models import ImagingResults
 
 def analyze_image(image_path, config):
     """Analyze one FITS image and return an ImagingResults object."""
-    record, image, imagec, peaksarray, stats = analyze_fits_file(image_path, config)
+    result = analyze_fits_file(
+        image_path,
+        peak_separation=config.peak_separation,
+        peak_sharp=getattr(config, "peak_sharp", 0.0),
+        maxsources=config.max_peaks,
+    )
+
+    if len(result) == 5:
+        record, image, imagec, peaksarray, stats = result
+    elif len(result) == 4:
+        record, image, peaksarray, stats = result
+        imagec = image
+    else:
+        raise ValueError(f"analyze_fits_file returned {len(result)} values; expected 4 or 5")
 
     return ImagingResults(
         image_path=Path(image_path),

@@ -118,6 +118,7 @@ def plot_peak_cutouts(
     pixel_arcsec=None,
     exposure_sec=None,
     zero_mag_counts=None,
+    config=None,
 ):
     """Plot small cutouts centered on detected peaks.
 
@@ -187,6 +188,7 @@ def plot_histogram(
     figsize=(8, 6),
     max_points=5_000_000,
     percentile_clip=(0.1, 99.9),
+    config=None,
 ):
     """Plot a histogram, sampling large images to avoid slow notebook plots."""
     arr = np.asarray(values).ravel()

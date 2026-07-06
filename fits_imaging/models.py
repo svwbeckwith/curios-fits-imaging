@@ -137,3 +137,49 @@ class ImagingResults:
             return None
 
         return float(peak[0]), float(peak[1])
+        
+    def plot_image(self, config=None, **kwargs):
+        from .plotting import plot_image_with_peaks
+        return plot_image_with_peaks(
+            self.display_image,
+            self.peaks,
+            title=self.title,
+            config=config,
+            **kwargs,
+        )
+
+    def plot_cutouts(self, config=None, **kwargs):
+        from .plotting import plot_peak_cutouts
+        return plot_peak_cutouts(
+            self.display_image,
+            self.peaks,
+            config=config,
+            **kwargs,
+        )
+
+    def plot_histogram(self, config=None, **kwargs):
+        from .plotting import plot_histogram
+        return plot_histogram(
+            self.display_image,
+            config=config,
+            **kwargs,
+        )
+
+    def print_summary(self):
+        from .report import print_image_summary
+        return print_image_summary(self.record, self.stats, self.peaks)
+
+    def print_peak_table(self, config=None, **kwargs):
+        from .report import print_peak_table
+
+        zero_mag_counts = getattr(config, "zero_mag_counts", 1.0)
+        swarpfac = -1.0 if self.softname == "SWarp" else 1.0
+
+        return print_peak_table(
+            self.peaks,
+            exposure_sec=self.exposure_sec,
+            zero_mag_counts=zero_mag_counts,
+            pa0=getattr(self.record, "pa_deg", 0.0),
+            swarpfac=swarpfac,
+            **kwargs,
+        )
