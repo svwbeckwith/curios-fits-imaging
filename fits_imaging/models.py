@@ -249,3 +249,15 @@ class ImagingResults:
         if show_histogram:
             fig, ax = self.plot_histogram(config=config)
             plt.show()
+
+    def psf_profile(self, peak_index=0, rmax=30, binsize=1.0):
+        from .psf import radial_profile
+        peaks = self.peak_array
+        x, y = peaks[peak_index, 0], peaks[peak_index, 1]
+        return radial_profile(self.display_image, x, y, rmax=rmax, binsize=binsize)
+
+    def encircled_energy(self, peak_index=0, rmax=30, binsize=1.0):
+        from .psf import encircled_energy
+        peaks = self.peak_array
+        x, y = peaks[peak_index, 0], peaks[peak_index, 1]
+        return encircled_energy(self.display_image, x, y, rmax=rmax, binsize=binsize)
