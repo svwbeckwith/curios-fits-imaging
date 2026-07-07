@@ -217,25 +217,41 @@ class ImagingResults:
             pixel_arcsec=pixel_arcsec,
         )
         
-        def report(
-            self,
-            config=None,
-            max_rows=50,
-            n_cutouts=25,
-            spansize=24,
-            show_histogram=True,
-        ):
+    def report(
+        self,
+        config=None,
+        max_rows=50,
+        n_cutouts=25,
+        spansize=24,
+        show_summary=True,
+        show_image=True,
+        show_table=True,
+        show_cutouts=True,
+        show_histogram=False,
+        show_statistics=True,
+    ):
         """Run the standard quick-look report."""
         import matplotlib.pyplot as plt
 
-        self.print_summary()
+        if show_summary:
+            self.print_summary()
 
-        fig, ax = self.plot_image(config=config, figsize=(16, 16))
-        plt.show()
+        if show_statistics:
+            print("\nSource statistics:")
+            print(self.source_statistics())
 
-        self.print_peak_table(config=config, max_rows=max_rows)
+            if config is not None:
+                print("\nSelected-region source statistics:")
+                print(self.selected_source_statistics(config=config))
 
-        if self.nstars > 0:
+        if show_image:
+            fig, ax = self.plot_image(config=config, figsize=(16, 16))
+            plt.show()
+
+        if show_table:
+            self.print_peak_table(config=config, max_rows=max_rows)
+
+        if show_cutouts and self.nstars > 0:
             fig, axs = self.plot_cutouts(
                 config=config,
                 nmax=n_cutouts,
@@ -249,7 +265,7 @@ class ImagingResults:
         if show_histogram:
             fig, ax = self.plot_histogram(config=config)
             plt.show()
-
+            
     def psf_profile(self, peak_index=0, rmax=30, binsize=1.0):
         from .psf import radial_profile
         peaks = self.peak_array
@@ -261,3 +277,15 @@ class ImagingResults:
         peaks = self.peak_array
         x, y = peaks[peak_index, 0], peaks[peak_index, 1]
         return encircled_energy(self.display_image, x, y, rmax=rmax, binsize=binsize)
+
+    def selected_peaks(self, config=None):
+        from .regions import select_peaks_region
+        return select_peaks_region(
+            self.peaks,
+            self.display_image.shape,
+            config=config,
+        )
+
+    def selected_source_statistics(self, config=None):
+        from .diagnostics import source_statistics
+        return source_statistics(self.selected_peaks(config=config))

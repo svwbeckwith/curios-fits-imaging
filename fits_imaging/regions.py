@@ -43,3 +43,38 @@ def statistics_image(image, config=None):
         return center_crop(image, size_pixels=size_pixels)
 
     raise ValueError(f"Unknown stats_region: {region}")
+    
+def point_in_center_region(x, y, image_shape, fraction=0.5):
+    ny, nx = image_shape
+    sx = nx * fraction
+    sy = ny * fraction
+    x0 = 0.5 * (nx - sx)
+    x1 = 0.5 * (nx + sx)
+    y0 = 0.5 * (ny - sy)
+    y1 = 0.5 * (ny + sy)
+    return (x >= x0) and (x <= x1) and (y >= y0) and (y <= y1)
+
+
+def select_peaks_region(peaks_array, image_shape, config=None):
+    peaks = np.asarray(peaks_array)
+
+    if peaks.size == 0:
+        return peaks
+
+    if peaks.ndim == 1:
+        peaks = peaks.reshape(1, -1)
+
+    region = getattr(config, "source_region", "full")
+
+    if region == "full":
+        return peaks
+
+    if region == "center_fraction":
+        fraction = getattr(config, "source_region_fraction", 0.5)
+        mask = [
+            point_in_center_region(row[0], row[1], image_shape, fraction=fraction)
+            for row in peaks
+        ]
+        return peaks[np.asarray(mask)]
+
+    raise ValueError(f"Unknown source_region: {region}")

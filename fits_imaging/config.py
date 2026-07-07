@@ -46,3 +46,7 @@ class ImagingConfig:
     stats_center_fraction: float = 0.5      # central 50% in x and y
     stats_center_pixels: int = 2000         # used only for center_pixels
     
+    # Source diagnostics region
+    source_region: str = "center_fraction"   # "full" or "center_fraction"
+    source_region_fraction: float = 0.5
+    
