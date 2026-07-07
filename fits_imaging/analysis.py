@@ -4,7 +4,7 @@ from .fits_io import read_fits_image
 from .photometry import peaks_to_array
 from .peak_finding import peak_finder
 from .coordinates import parallactic_pa_from_altaz
-
+from .regions import statistics_image
 
 def analyze_fits_file(path, peak_separation=10.0, peak_sharp=0.2, maxsources=400, fit_method="gaussian"):
     """Read one FITS file and run peak finding. Returns (record, image2d, peaks_array)."""
@@ -27,17 +27,23 @@ def analyze_fits_file(path, peak_separation=10.0, peak_sharp=0.2, maxsources=400
     }
     return record, image, peaks_array, stats
     
+import time
 from pathlib import Path
 from .models import ImagingResults
 
+
 def analyze_image(image_path, config):
     """Analyze one FITS image and return an ImagingResults object."""
+    t0 = time.time()
+
     result = analyze_fits_file(
         image_path,
         peak_separation=config.peak_separation,
         peak_sharp=getattr(config, "peak_sharp", 0.0),
         maxsources=config.max_peaks,
     )
+
+    elapsed = time.time() - t0
 
     if len(result) == 5:
         record, image, imagec, peaksarray, stats = result
@@ -46,6 +52,18 @@ def analyze_image(image_path, config):
         imagec = image
     else:
         raise ValueError(f"analyze_fits_file returned {len(result)} values; expected 4 or 5")
+
+    stats = dict(stats)
+    stats["peak_find_time_sec"] = elapsed
+    stats["npeaks"] = len(peaksarray)
+    
+    stats_img = statistics_image(imagec, config)
+    finite = stats_img[np.isfinite(stats_img)]
+
+    stats["stats_region"] = getattr(config, "stats_region", "full")
+    stats["region_mean"] = float(np.mean(finite))
+    stats["region_median"] = float(np.median(finite))
+    stats["region_std"] = float(np.std(finite))
 
     return ImagingResults(
         image_path=Path(image_path),

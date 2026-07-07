@@ -20,6 +20,8 @@ class ImagingConfig:
     threshold_sigma: float = 5.0
     max_peaks: int = 1000
     peak_separation: float = 10.0
+    peak_sharp: float = 0.2
+    fit_method: str = "gaussian"
 
     # Display
     contrast_method: str = "sigma"
@@ -38,4 +40,9 @@ class ImagingConfig:
     invert_gray: bool = False
     histogram_max_points: int = 2_000_000
     histogram_bins: int = 200
+    
+    # Statistics region
+    stats_region: str = "center_fraction"   # "full", "center_fraction", or "center_pixels"
+    stats_center_fraction: float = 0.5      # central 50% in x and y
+    stats_center_pixels: int = 2000         # used only for center_pixels
     
