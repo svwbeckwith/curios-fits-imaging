@@ -167,7 +167,7 @@ class ImagingResults:
 
     def print_summary(self):
         from .report import print_image_summary
-        return print_image_summary(self.record, self.stats, self.peaks)
+        return print_image_summary(self.record, self.display_image, self.stats)
 
     def print_peak_table(self, config=None, **kwargs):
         from .report import print_peak_table
@@ -216,3 +216,36 @@ class ImagingResults:
             zero_mag_counts=zero_mag_counts,
             pixel_arcsec=pixel_arcsec,
         )
+        
+        def report(
+            self,
+            config=None,
+            max_rows=50,
+            n_cutouts=25,
+            spansize=24,
+            show_histogram=True,
+        ):
+        """Run the standard quick-look report."""
+        import matplotlib.pyplot as plt
+
+        self.print_summary()
+
+        fig, ax = self.plot_image(config=config, figsize=(16, 16))
+        plt.show()
+
+        self.print_peak_table(config=config, max_rows=max_rows)
+
+        if self.nstars > 0:
+            fig, axs = self.plot_cutouts(
+                config=config,
+                nmax=n_cutouts,
+                spansize=spansize,
+                pixel_arcsec=getattr(config, "pixel_arcsec", None),
+                exposure_sec=self.exposure_sec,
+                zero_mag_counts=getattr(config, "zero_mag_counts", 1.0),
+            )
+            plt.show()
+
+        if show_histogram:
+            fig, ax = self.plot_histogram(config=config)
+            plt.show()
