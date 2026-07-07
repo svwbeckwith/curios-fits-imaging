@@ -34,8 +34,11 @@ results.report(config=config)
 ## Screenshot
 
 ![Standard Report](Figures/Screenshot 2026-07-07 at 12.05.18 PM.png)
+
 ![Standard Report](Figures/Screenshot 2026-07-07 at 12.05.41 PM.png)
+
 ![Standard Report](Figures/Screenshot 2026-07-07 at 12.06.01 PM.png)
+
 ![Standard Report](Figures/Screenshot 2026-07-07 at 12.06.18 PM.png)
 ---
 
