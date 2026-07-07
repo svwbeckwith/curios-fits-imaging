@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "curios-fits-imaging"
+version = "2.9.0"
+description = "Python tools for analyzing CuRIOS FITS images"
+readme = "README.md"
+requires-python = ">=3.12"
+
+authors = [
+    { name = "Steven Beckwith" }
+]
+
+license = { text = "MIT" }
+
+keywords = [
+    "astronomy",
+    "FITS",
+    "astrophotography",
+    "photometry",
+    "image-processing"
+]
+
+dependencies = [
+    "numpy",
+    "scipy",
+    "matplotlib",
+    "astropy",
+    "photutils",
+    "pandas"
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["fits_imaging*"]

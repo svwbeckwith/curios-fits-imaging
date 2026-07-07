@@ -1,5 +1,8 @@
 numpy
+scipy
 matplotlib
 astropy
-scipy
+photutils
+pandas
 jupyterlab
+ipykernel
