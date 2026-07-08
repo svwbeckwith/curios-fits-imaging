@@ -132,3 +132,12 @@ class ImagingSession:
             config=config,
             max_files=max_files,
         )
+        
+    def open_run(self, change_folder=False):
+        """Open the current folder as an ImagingRun."""
+        from .run import ImagingRun
+
+        if self.current_folder is None or change_folder:
+            self.choose_folder()
+
+        return ImagingRun(self.current_folder)
