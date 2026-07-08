@@ -119,3 +119,16 @@ class ImagingSession:
 
         image_path = self.choose_image(change_folder=change_folder)
         return analyze_image(image_path, config)
+        
+    def analyze_current_folder(self, config, max_files=None):
+        """Analyze all FITS images in the current working folder."""
+        from .batch import analyze_folder
+
+        if self.current_folder is None:
+            self.choose_folder()
+
+        return analyze_folder(
+            self.current_folder,
+            config=config,
+            max_files=max_files,
+        )
