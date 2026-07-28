@@ -16,6 +16,7 @@ fits_imaging/coordinates.py
 fits_imaging/diagnostics.py
 fits_imaging/export.py
 fits_imaging/fits_io.py
+fits_imaging/gui.py
 fits_imaging/models.py
 fits_imaging/movie.py
 fits_imaging/peak_finding.py
@@ -31,6 +32,7 @@ tests/test_analysis_modes.py
 tests/test_cli.py
 tests/test_contrast.py
 tests/test_exposure.py
+tests/test_gui.py
 tests/test_peak_finding.py
 tests/test_run.py
 tests/test_session.py

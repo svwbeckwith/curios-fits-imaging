@@ -130,6 +130,12 @@ python -m pip install jupyterlab ipykernel
 This installs the `curios-fits` command-line program and makes the
 `fits_imaging` package importable from notebooks.
 
+To install the desktop GUI dependencies:
+
+```bash
+python -m pip install -e ".[gui]"
+```
+
 ---
 
 ## Typical Workflow
@@ -227,6 +233,31 @@ curios-fits /path/to/observing-folder --kind focus --mode focus
 The command-line tool defaults to `--kind science` so calibration and focus
 frames are not accidentally sent through source detection.
 
+### Desktop GUI
+
+Launch the first PySide6 workbench:
+
+```bash
+curios-fits-gui
+```
+
+The current GUI milestone supports:
+
+- Selecting one observing folder
+- Browsing files by image type
+- Previewing a selected FITS image
+- Adjusting source-detection parameters
+- Running one selected-file analysis
+- Displaying a compact result table
+- Listing detected peaks after source detection
+- Opening a peak-inspector window with a source cutout, position, flux,
+  magnitude, Gaussian widths, and FWHM
+- Exporting the selected-image summary
+
+Batch GUI analysis and polished image/plot export are planned later. The GUI
+uses the same `ImagingConfig`, `ImagingRun`, and `analyze_image` paths as the
+notebook and CLI.
+
 ---
 
 ## Development Status
@@ -247,14 +278,15 @@ Implemented
 - Command-line entry point
 - Explicit analysis modes for source detection, focus, rotation/blur, and statistics-only workflows
 - Command-line controls for core peak-finding parameters
+- First PySide6 desktop workbench
 
 Planned
 
 - WCS support
 - More specialized Bahtinov focus measurements
 - Fixed-width Gaussian fitting option
-- Scientific workbench
-- PySide6 GUI
+- Batch-oriented GUI analysis
+- GUI image/plot export
 
 ---
 

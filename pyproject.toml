@@ -32,6 +32,11 @@ dependencies = [
     "pandas"
 ]
 
+[project.optional-dependencies]
+gui = [
+    "PySide6",
+]
+
 [tool.setuptools]
 include-package-data = true
 
@@ -40,3 +45,4 @@ include = ["fits_imaging*"]
     
 [project.scripts]
 curios-fits = "fits_imaging.cli:main"
+curios-fits-gui = "fits_imaging.gui:main"
