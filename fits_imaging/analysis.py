@@ -180,6 +180,10 @@ def _stats_result(image_path, config, mode, extra_stats=None):
             "elapsed_sec": elapsed,
             "npeaks": 0,
             "peak_find_time_sec": 0.0,
+            "frame_count": record.frame_count,
+            "total_exposure_sec": record.total_exposure_sec,
+            "photometry_exposure_sec": record.total_exposure_sec,
+            "exposure_source": record.exposure_source,
             "pa_calc_deg": _pa_calc(record),
         }
     )
@@ -197,13 +201,26 @@ def _stats_result(image_path, config, mode, extra_stats=None):
         header=getattr(record, "header", None),
     )
 
-def analyze_fits_file(path, peak_separation=10.0, peak_sharp=0.2, maxsources=400, fit_method="gaussian"):
+def analyze_fits_file(
+    path,
+    peak_separation=10.0,
+    peak_sharp=0.2,
+    maxsources=400,
+    fit_method="gaussian",
+    threshold_sigma=10.0,
+):
     """Read one FITS file and run peak finding. Returns (record, image2d, peaks_array)."""
     record = read_fits_image(path)
     image = record.data[0] if record.data.ndim == 3 else record.data
     t0 = time.time()
-    peaks = peak_finder(image, peak_separation=peak_separation, peak_sharp=peak_sharp,
-                        maxsources=maxsources, fit_method=fit_method)
+    peaks = peak_finder(
+        image,
+        peak_separation=peak_separation,
+        peak_sharp=peak_sharp,
+        maxsources=maxsources,
+        fit_method=fit_method,
+        threshold_sigma=threshold_sigma,
+    )
     elapsed = time.time() - t0
     peaks_array = peaks_to_array(peaks)
     stats = {
@@ -239,6 +256,8 @@ def analyze_image(image_path, config, mode=None):
         peak_separation=config.peak_separation,
         peak_sharp=getattr(config, "peak_sharp", 0.0),
         maxsources=config.max_peaks,
+        fit_method=getattr(config, "fit_method", "gaussian"),
+        threshold_sigma=getattr(config, "threshold_sigma", 10.0),
     )
 
     elapsed = time.time() - t0
@@ -255,6 +274,10 @@ def analyze_image(image_path, config, mode=None):
     stats["analysis_mode"] = mode
     stats["peak_find_time_sec"] = elapsed
     stats["npeaks"] = len(peaksarray)
+    stats["frame_count"] = record.frame_count
+    stats["total_exposure_sec"] = record.total_exposure_sec
+    stats["photometry_exposure_sec"] = record.total_exposure_sec
+    stats["exposure_source"] = record.exposure_source
     stats.update(_region_stats(imagec, config))
 
     return ImagingResults(

@@ -51,7 +51,14 @@ def test_files_for_filters_science_alias(tmp_path):
     assert table["file"].tolist() == [files[0].name, files[1].name]
 
     preview = run.preview(kind="science", n=1)
-    assert preview.columns.tolist() == ["index", "file", "kind", "include"]
+    assert preview.columns.tolist() == [
+        "index",
+        "file",
+        "kind",
+        "frame_count",
+        "total_exposure_sec",
+        "include",
+    ]
     assert preview["file"].tolist() == [files[0].name]
 
 

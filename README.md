@@ -155,11 +155,16 @@ summary = run.analyze_all(config, kind="science", max_files=10)
 
 `run.file_table` is filename-based by default so it appears quickly even for
 large or cloud-backed FITS folders. To read FITS headers for object, camera,
-exposure, and date columns, run:
+single-frame exposure, total exposure, and date columns, run:
 
 ```python
 run.load_file_metadata()
 ```
+
+Summed files with names such as `Target_..._5_sum.fits` are treated as five
+frames. The original FITS exposure is kept as `exposure_sec`; the derived
+total appears as `total_exposure_sec`. Photometry normalization uses
+`photometry_exposure_sec`, which defaults to the total exposure.
 
 Use `kind="science_single"`, `kind="science_sum"`, `kind="focus"`,
 `kind="dark"`, `kind="flat"`, or `kind="rotation_blur"` to choose a
@@ -189,10 +194,27 @@ List the files and their inferred image types:
 curios-fits /path/to/observing-folder --list
 ```
 
+Include FITS header metadata in the listing:
+
+```bash
+curios-fits /path/to/observing-folder --list --metadata
+```
+
 Analyze science images in one observing folder:
 
 ```bash
 curios-fits /path/to/observing-folder --kind science --output summary.csv
+```
+
+Tune source-detection parameters:
+
+```bash
+curios-fits /path/to/observing-folder \
+    --kind science \
+    --threshold-sigma 7 \
+    --max-peaks 200 \
+    --peak-separation 12 \
+    --fit-method gaussian
 ```
 
 Run a specific analysis mode:
@@ -224,11 +246,13 @@ Implemented
 - Observing-run API
 - Command-line entry point
 - Explicit analysis modes for source detection, focus, rotation/blur, and statistics-only workflows
+- Command-line controls for core peak-finding parameters
 
 Planned
 
 - WCS support
 - More specialized Bahtinov focus measurements
+- Fixed-width Gaussian fitting option
 - Scientific workbench
 - PySide6 GUI
 

@@ -7,7 +7,7 @@ from astropy.io import fits
 import pandas as pd
 
 from .analysis import analyze_image
-from .fits_io import _header_float
+from .fits_io import _header_float, exposure_info, parse_sum_frame_count
 
 
 class ImagingRun:
@@ -46,6 +46,7 @@ class ImagingRun:
         return pd.DataFrame(rows)
 
     def _file_row(self, path, read_headers=False):
+        filename_frame_count = parse_sum_frame_count(path)
         row = {
             "file": path.name,
             "path": str(path),
@@ -54,6 +55,9 @@ class ImagingRun:
             "object": "",
             "camera": "",
             "exposure_sec": None,
+            "frame_count": filename_frame_count or 1,
+            "total_exposure_sec": None,
+            "exposure_source": "filename_sum_count" if filename_frame_count else "single_frame",
             "dateobs": "",
             "metadata_loaded": False,
             "error": "",
@@ -70,6 +74,9 @@ class ImagingRun:
                     "object": metadata["object"],
                     "camera": metadata["camera"],
                     "exposure_sec": metadata["exposure_sec"],
+                    "frame_count": metadata["frame_count"],
+                    "total_exposure_sec": metadata["total_exposure_sec"],
+                    "exposure_source": metadata["exposure_source"],
                     "dateobs": metadata["dateobs"],
                     "metadata_loaded": True,
                 }
@@ -138,8 +145,8 @@ class ImagingRun:
 
     def preview(self, kind=None, n=25):
         """Return a compact notebook-friendly preview of the file table."""
-        columns = ["index", "file", "kind", "include"]
-        return self.table_for(kind=kind).loc[:, columns].head(n)
+        columns = ["index", "file", "kind", "frame_count", "total_exposure_sec", "include"]
+        return self.table_for(kind=kind).reindex(columns=columns).head(n)
 
     def analyze_all(self, config, kind=None, mode=None, max_files=None):
         """Analyze files in this run, optionally filtered by image kind."""
@@ -181,6 +188,10 @@ class ImagingRun:
             "object": result.object_name,
             "camera": result.camera,
             "exposure_sec": result.exposure_sec,
+            "frame_count": result.frame_count,
+            "total_exposure_sec": result.total_exposure_sec,
+            "photometry_exposure_sec": result.photometry_exposure_sec,
+            "exposure_source": result.exposure_source,
             "nstars": result.nstars,
             "median_fwhm_pixels": result.median_fwhm_pixels,
             "median_background": result.median_background,
@@ -247,10 +258,16 @@ def read_fits_metadata(path):
                 header.extend(hdu.header, update=True)
                 break
 
+    exposure_sec = _header_float(header, ("EXPTIME", "IEXP", "EXPOSURE"), 0.0)
+    exposure = exposure_info(path, header, exposure_sec)
+
     return {
         "object": str(header.get("ID", header.get("OBJECT", ""))),
         "camera": str(header.get("INSTRUME", header.get("CAMERA", ""))),
-        "exposure_sec": _header_float(header, ("EXPTIME", "IEXP", "EXPOSURE"), 0.0),
+        "exposure_sec": exposure_sec,
+        "frame_count": exposure["frame_count"],
+        "total_exposure_sec": exposure["total_exposure_sec"],
+        "exposure_source": exposure["exposure_source"],
         "dateobs": str(header.get("DATEOBS", header.get("DATE-OBS", header.get("DATE", "")))),
         "header": header,
     }

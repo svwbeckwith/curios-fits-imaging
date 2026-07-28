@@ -32,12 +32,28 @@ class ImagingResults:
         return float(getattr(self.record, "exposure_sec", np.nan))
 
     @property
+    def frame_count(self) -> int:
+        return int(getattr(self.record, "frame_count", 1))
+
+    @property
+    def total_exposure_sec(self) -> float:
+        return float(getattr(self.record, "total_exposure_sec", self.exposure_sec))
+
+    @property
+    def photometry_exposure_sec(self) -> float:
+        return float(self.stats.get("photometry_exposure_sec", self.total_exposure_sec))
+
+    @property
+    def exposure_source(self) -> str:
+        return str(getattr(self.record, "exposure_source", "header"))
+
+    @property
     def softname(self) -> str:
         return str(getattr(self.record, "softname", ""))
 
     @property
     def title(self) -> str:
-        return f"{self.object_name}   {self.camera}  {self.exposure_sec:.3f} sec"
+        return f"{self.object_name}   {self.camera}  {self.total_exposure_sec:.3f} sec total"
 
     @property
     def display_image(self) -> np.ndarray:
@@ -181,7 +197,7 @@ class ImagingResults:
 
         return print_peak_table(
             self.peaks,
-            exposure_sec=self.exposure_sec,
+            exposure_sec=self.photometry_exposure_sec,
             zero_mag_counts=zero_mag_counts,
             pa0=getattr(self.record, "pa_deg", 0.0),
             swarpfac=swarpfac,
@@ -216,7 +232,7 @@ class ImagingResults:
         return export_peak_csv(
             path,
             self.peaks,
-            exposure_sec=self.exposure_sec,
+            exposure_sec=self.photometry_exposure_sec,
             zero_mag_counts=zero_mag_counts,
             pixel_arcsec=pixel_arcsec,
         )
@@ -263,7 +279,7 @@ class ImagingResults:
                 nmax=n_cutouts,
                 spansize=spansize,
                 pixel_arcsec=getattr(config, "pixel_arcsec", None),
-                exposure_sec=self.exposure_sec,
+                exposure_sec=self.photometry_exposure_sec,
                 zero_mag_counts=getattr(config, "zero_mag_counts", 1.0),
             )
             plt.show()

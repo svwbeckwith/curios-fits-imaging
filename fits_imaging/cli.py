@@ -50,6 +50,12 @@ def build_parser():
     )
 
     parser.add_argument(
+        "--metadata",
+        action="store_true",
+        help="Read FITS headers when listing files to include exposure metadata.",
+    )
+
+    parser.add_argument(
         "--max-files",
         type=int,
         default=None,
@@ -63,7 +69,76 @@ def build_parser():
         help="Output CSV file for the summary.",
     )
 
+    parser.add_argument(
+        "--threshold-sigma",
+        type=float,
+        default=None,
+        help="Peak detection threshold in background sigma units.",
+    )
+
+    parser.add_argument(
+        "--max-peaks",
+        type=int,
+        default=None,
+        help="Maximum number of detected peaks per image.",
+    )
+
+    parser.add_argument(
+        "--peak-separation",
+        type=float,
+        default=None,
+        help="Minimum separation between accepted peaks in pixels.",
+    )
+
+    parser.add_argument(
+        "--peak-sharp",
+        type=float,
+        default=None,
+        help="Minimum sharpness value for candidate peaks.",
+    )
+
+    parser.add_argument(
+        "--fit-method",
+        choices=("gaussian", "moments"),
+        default=None,
+        help="Peak fitting method.",
+    )
+
+    parser.add_argument(
+        "--zero-mag-counts",
+        type=float,
+        default=None,
+        help="Photometric zero point counts.",
+    )
+
+    parser.add_argument(
+        "--pixel-arcsec",
+        type=float,
+        default=None,
+        help="Pixel scale in arcseconds per pixel.",
+    )
+
     return parser
+
+
+def config_from_args(args, data_root):
+    """Build ImagingConfig from command-line options."""
+    config = ImagingConfig(data_root=data_root)
+
+    for attr in (
+        "threshold_sigma",
+        "max_peaks",
+        "peak_separation",
+        "peak_sharp",
+        "fit_method",
+        "zero_mag_counts",
+        "pixel_arcsec",
+    ):
+        value = getattr(args, attr)
+        if value is not None:
+            setattr(config, attr, value)
+
+    return config
 
 
 def main(argv=None):
@@ -78,8 +153,8 @@ def main(argv=None):
     if not folder.is_dir():
         parser.error(f"Not a directory: {folder}")
 
-    config = ImagingConfig(data_root=folder.parent)
-    run = ImagingRun(folder)
+    config = config_from_args(args, data_root=folder.parent)
+    run = ImagingRun(folder, read_headers=args.metadata)
     kind = None if args.all else args.kind
     try:
         mode = normalize_analysis_mode(args.mode) if args.mode is not None else None
@@ -90,10 +165,20 @@ def main(argv=None):
     print(f"Found {len(run.files)} FITS files")
     print(f"Available image types: {', '.join(run.kinds()) or 'none'}")
     print(f"Analysis mode: {mode or 'auto'}")
+    print(
+        "Peak config: threshold_sigma={:.2f}, max_peaks={}, separation={:.1f}, sharp={:.2f}, fit={}".format(
+            config.threshold_sigma,
+            config.max_peaks,
+            config.peak_separation,
+            config.peak_sharp,
+            config.fit_method,
+        )
+    )
 
     if args.list:
         print()
-        print(run.file_table[["file", "kind", "object", "exposure_sec", "include"]])
+        columns = ["file", "kind", "frame_count", "exposure_sec", "total_exposure_sec", "include"]
+        print(run.file_table.reindex(columns=columns))
         return 0
 
     selected_files = run.files_for(kind=kind)

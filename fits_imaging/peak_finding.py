@@ -131,13 +131,19 @@ def fit_one_peak_moments(args) -> Optional[FitPeak]:
     return FitPeak(float(x0 - half + xc), float(y0 - half + yc), float(area), sx, sy, flux)
 
 
-def peak_finder(image: np.ndarray, peak_separation: float = 10.0, peak_sharp: float = 0.2,
-                maxsources: int = 400, fit_method: str = "gaussian") -> List[FitPeak]:
+def peak_finder(
+    image: np.ndarray,
+    peak_separation: float = 10.0,
+    peak_sharp: float = 0.2,
+    maxsources: int = 400,
+    fit_method: str = "gaussian",
+    threshold_sigma: float = 10.0,
+) -> List[FitPeak]:
     """Find point-like sources and return a flux-sorted list of fitted peaks."""
     if image.ndim != 2:
         raise ValueError("peak_finder expects a 2-D image")
     median, sigma = image_stats(image)
-    candidates = find_candidates(image, median, sigma, peak_sharp)
+    candidates = find_candidates(image, median, sigma, peak_sharp, threshold_sigma=threshold_sigma)
     if len(candidates) == 0:
         return []
     candidates = candidates[np.argsort(candidates[:, 2])[::-1]][:maxsources * 3]

@@ -28,5 +28,9 @@ fits_imaging/report.py
 fits_imaging/run.py
 fits_imaging/session.py
 tests/test_analysis_modes.py
+tests/test_cli.py
 tests/test_contrast.py
+tests/test_exposure.py
+tests/test_peak_finding.py
 tests/test_run.py
+tests/test_session.py

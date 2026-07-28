@@ -7,9 +7,17 @@ def print_image_summary(record, image, stats):
     """Print a compact image and telescope metadata summary."""
     mode = stats.get("analysis_mode", "source_detection")
     print("{}  {} x {}  {}  {:.3f} sec".format(
-        record.object_name, image.shape[1], image.shape[0], record.camera, record.exposure_sec
+        record.object_name, image.shape[1], image.shape[0], record.camera, record.total_exposure_sec
     ))
     print(f"Analysis mode: {mode}")
+    print(
+        "Exposure: {:.3f} sec x {} frame(s) = {:.3f} sec total; photometry uses {:.3f} sec".format(
+            record.exposure_sec,
+            getattr(record, "frame_count", 1),
+            getattr(record, "total_exposure_sec", record.exposure_sec),
+            stats.get("photometry_exposure_sec", getattr(record, "total_exposure_sec", record.exposure_sec)),
+        )
+    )
     print(
         "RAH: {:7.3f}  Dec: {:7.3f}  PA: {:6.2f}  PA2: {:6.2f}  Alt: {:7.1f}  Az: {:7.1f}".format(
             record.ra_hours,
