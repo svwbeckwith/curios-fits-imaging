@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 
 @dataclass
@@ -10,11 +10,12 @@ class ImagingConfig:
     """User-adjustable configuration values."""
 
     # Change this on each computer.
-    data_root: Path = Path("~/Dropbox/CuRIOS/Software/DataDirectories").expanduser()
+    data_root: Optional[Path] = None
+    #data_root: Path = Path("~/Dropbox/CuRIOS/Software/DataDirectories").expanduser()
 
     # Photometry
     zero_mag_counts: float = 115000000
-    pixel_arcsec: float = 1.24
+    pixel_arcsec: float = 1.55
 
     # Peak finding
     threshold_sigma: float = 5.0
@@ -50,3 +51,6 @@ class ImagingConfig:
     source_region: str = "center_fraction"   # "full" or "center_fraction"
     source_region_fraction: float = 0.5
     
+    def __post_init__(self):
+        if self.data_root is not None:
+            self.data_root = Path(self.data_root).expanduser().resolve()

@@ -1,3 +1,19 @@
+Metadata-Version: 2.4
+Name: curios-fits-imaging
+Version: 2.9.0
+Summary: Python tools for analyzing CuRIOS FITS images
+Author: Steven Beckwith
+License: MIT
+Keywords: astronomy,FITS,astrophotography,photometry,image-processing
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: numpy
+Requires-Dist: scipy
+Requires-Dist: matplotlib
+Requires-Dist: astropy
+Requires-Dist: photutils
+Requires-Dist: pandas
+
 # CuRIOS FITS Imaging
 
 Python tools for reading, analyzing, and visualizing astronomical FITS images acquired with the CuRIOS imaging system.

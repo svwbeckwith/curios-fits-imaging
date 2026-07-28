@@ -2,11 +2,12 @@
 
 import json
 from pathlib import Path
-
+from typing import Optional, Union
 from .fits_io import choose_file
 
 
-DEFAULT_DATA_ROOT = "~/Dropbox/CuRIOS/Software/DataDirectories"
+#DEFAULT_DATA_ROOT = "~/Dropbox/CuRIOS/Software/DataDirectories"
+DEFAULT_DATA_ROOT = None
 DEFAULT_STATE_PATH = "~/.curios_fits_imaging/session.json"
 DEFAULT_DATA_ROOT_CANDIDATES = [
     "~/Library/CloudStorage/Dropbox/CuRIOS/Software/DataDirectories",
@@ -22,15 +23,38 @@ def default_data_root():
 
 class ImagingSession:
     """Remember the current working data folder and last-used image."""
+    
+    def __init__(
+        self,
+        data_root: Optional[Union[str, Path]] = None,
+        state_path: Optional[Union[str, Path]] = None,
+    ):
+        # Location of the saved session-state file
+        if state_path is None:
+            self.state_path = (
+                Path.home()
+                / ".config"
+                / "curios-fits-imaging"
+                / "session.json"
+            )
+        else:
+            self.state_path = Path(state_path).expanduser().resolve()
 
-    def __init__(self, data_root=None, state_path=None):
-        self.state_path = Path(state_path or DEFAULT_STATE_PATH).expanduser()
-        self.data_root = Path(data_root).expanduser() if data_root else default_data_root()
+        # Session values expected by save(), load(), and choose_image()
+        self.data_root = None
         self.current_folder = None
         self.last_image = None
 
-        self.load()
+        # Load previously saved state, if your class already has load()
+        if hasattr(self, "load"):
+            self.load()
 
+        # An explicitly supplied data_root overrides the saved value
+        if data_root is not None:
+            self.data_root = Path(data_root).expanduser().resolve()
+            self.current_folder = None
+            self.last_image = None
+            
     def load(self):
         """Load previous session state if available."""
         if not self.state_path.exists():

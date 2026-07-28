@@ -35,5 +35,8 @@ dependencies = [
 [tool.setuptools]
 include-package-data = true
 
-[tool.setuptools.packages.find]
-include = ["fits_imaging*"]
+ [tool.setuptools.packages.find]
+    include = ["fits_imaging*"]
+    
+[project.scripts]
+curios-fits = "fits_imaging.cli:main"
