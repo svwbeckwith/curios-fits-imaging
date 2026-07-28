@@ -3,11 +3,13 @@ pyproject.toml
 curios_fits_imaging.egg-info/PKG-INFO
 curios_fits_imaging.egg-info/SOURCES.txt
 curios_fits_imaging.egg-info/dependency_links.txt
+curios_fits_imaging.egg-info/entry_points.txt
 curios_fits_imaging.egg-info/requires.txt
 curios_fits_imaging.egg-info/top_level.txt
 fits_imaging/__init__.py
 fits_imaging/analysis.py
 fits_imaging/batch.py
+fits_imaging/cli.py
 fits_imaging/config.py
 fits_imaging/contrast.py
 fits_imaging/coordinates.py
@@ -25,4 +27,6 @@ fits_imaging/regions.py
 fits_imaging/report.py
 fits_imaging/run.py
 fits_imaging/session.py
+tests/test_analysis_modes.py
 tests/test_contrast.py
+tests/test_run.py

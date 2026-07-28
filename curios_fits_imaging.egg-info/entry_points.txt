@@ -1,0 +1,2 @@
+[console_scripts]
+curios-fits = fits_imaging.cli:main

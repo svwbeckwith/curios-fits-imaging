@@ -35,13 +35,19 @@ The project is designed to be used from Jupyter Lab today and will evolve into a
 ## Example
 
 ```python
+from pathlib import Path
+
+from fits_imaging.analysis import analyze_image
 from fits_imaging.config import ImagingConfig
 from fits_imaging.session import ImagingSession
 
-config = ImagingConfig()
-session = ImagingSession()
+data_root = Path("/path/to/your/DataDirectories")
+config = ImagingConfig(data_root=data_root)
+session = ImagingSession(data_root=data_root)
 
-results = session.analyze(config)
+session.choose_folder()
+image_path = session.choose_image()
+results = analyze_image(image_path, config)
 results.report(config=config)
 ```
 
@@ -72,6 +78,9 @@ results.report(config=config)
 - Radial PSF profiles
 - Encircled-energy calculations
 - Persistent imaging sessions
+- Observing-run file tables
+- Image-kind filtering for science, focus, dark, flat, and rotation/blur files
+- Command-line batch entry point
 - Configurable plotting styles
 
 ---
@@ -125,22 +134,79 @@ source .venv/bin/activate
 Install the scientific packages
 
 ```bash
-pip install numpy scipy matplotlib astropy photutils pandas numba jupyterlab
+python -m pip install -e .
+python -m pip install jupyterlab ipykernel
 ```
 
-*(Future releases will support installation with `pip install -e .`.)*
+This installs the `curios-fits` command-line program and makes the
+`fits_imaging` package importable from notebooks.
 
 ---
 
 ## Typical Workflow
 
+### Jupyter Lab
+
 1. Start Jupyter Lab.
-2. Open the analysis notebook.
-3. Select an observing folder.
-4. Select a FITS image.
-5. Run the analysis.
-6. Inspect the generated report.
-7. Export results if desired.
+2. Open `notebooks/CuRIOS_Image_Analysis.ipynb`.
+3. Set `data_root` to the folder that contains your observing folders.
+4. Select an observing folder.
+5. Select a FITS image.
+6. Run the analysis.
+7. Inspect the generated report.
+8. Export results if desired.
+
+For folder-level work:
+
+```python
+run = session.open_run()
+run.file_table
+summary = run.analyze_all(config, kind="science", max_files=10)
+```
+
+Use `kind="science_single"`, `kind="science_sum"`, `kind="focus"`,
+`kind="dark"`, `kind="flat"`, or `kind="rotation_blur"` to choose a
+specific image type. Use `kind=None` only when you intentionally want every
+FITS file in the folder to go through the current source-detection analysis.
+
+Analysis modes can also be selected explicitly:
+
+```python
+run.analyze_all(config, kind="dark", mode="statistics")
+run.analyze_all(config, kind="focus", mode="focus")
+run.analyze_all(config, kind="rotation_blur", mode="rotation_blur")
+```
+
+If `mode` is omitted, `ImagingRun` chooses a default from each file's kind:
+
+- Science images use `source_detection`
+- Focus/Bahtinov images use `focus`
+- Rotating or blurred fields use `rotation_blur`
+- Darks and flats use `statistics`
+
+### Command Line
+
+List the files and their inferred image types:
+
+```bash
+curios-fits /path/to/observing-folder --list
+```
+
+Analyze science images in one observing folder:
+
+```bash
+curios-fits /path/to/observing-folder --kind science --output summary.csv
+```
+
+Run a specific analysis mode:
+
+```bash
+curios-fits /path/to/observing-folder --kind dark --mode statistics
+curios-fits /path/to/observing-folder --kind focus --mode focus
+```
+
+The command-line tool defaults to `--kind science` so calibration and focus
+frames are not accidentally sent through source detection.
 
 ---
 
@@ -148,7 +214,7 @@ pip install numpy scipy matplotlib astropy photutils pandas numba jupyterlab
 
 Current release:
 
-**Version 2.8**
+**Version 2.9**
 
 Implemented
 
@@ -158,13 +224,16 @@ Implemented
 - Region-aware statistics
 - PSF diagnostics
 - CSV export
+- Observing-run API
+- Command-line entry point
+- Explicit analysis modes for source detection, focus, rotation/blur, and statistics-only workflows
 
 Planned
 
 - WCS support
-- Batch processing
+- More specialized Bahtinov focus measurements
 - Scientific workbench
-- Qt GUI
+- PySide6 GUI
 
 ---
 

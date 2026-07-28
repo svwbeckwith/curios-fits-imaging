@@ -169,6 +169,10 @@ class ImagingResults:
         from .report import print_image_summary
         return print_image_summary(self.record, self.display_image, self.stats)
 
+    @property
+    def analysis_mode(self) -> str:
+        return str(self.stats.get("analysis_mode", "source_detection"))
+
     def print_peak_table(self, config=None, **kwargs):
         from .report import print_peak_table
 
@@ -236,13 +240,15 @@ class ImagingResults:
         if show_summary:
             self.print_summary()
 
-        if show_statistics:
+        if show_statistics and self.analysis_mode == "source_detection":
             print("\nSource statistics:")
             print(self.source_statistics())
 
             if config is not None:
                 print("\nSelected-region source statistics:")
                 print(self.selected_source_statistics(config=config))
+        elif show_statistics:
+            print(f"\nAnalysis mode: {self.analysis_mode}")
 
         if show_image:
             fig, ax = self.plot_image(config=config, figsize=(16, 16))

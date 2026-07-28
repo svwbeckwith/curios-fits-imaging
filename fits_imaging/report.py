@@ -5,9 +5,11 @@ from .photometry import counts_to_mag
 
 def print_image_summary(record, image, stats):
     """Print a compact image and telescope metadata summary."""
+    mode = stats.get("analysis_mode", "source_detection")
     print("{}  {} x {}  {}  {:.3f} sec".format(
         record.object_name, image.shape[1], image.shape[0], record.camera, record.exposure_sec
     ))
+    print(f"Analysis mode: {mode}")
     print(
         "RAH: {:7.3f}  Dec: {:7.3f}  PA: {:6.2f}  PA2: {:6.2f}  Alt: {:7.1f}  Az: {:7.1f}".format(
             record.ra_hours,
@@ -27,7 +29,10 @@ def print_image_summary(record, image, stats):
             stats.get("max", 0.0),
         )
     )
-    print("Found {} peaks in {:.2f} sec".format(stats.get("npeaks", 0), stats.get("elapsed_sec", 0.0)))
+    if mode == "source_detection":
+        print("Found {} peaks in {:.2f} sec".format(stats.get("npeaks", 0), stats.get("elapsed_sec", 0.0)))
+    else:
+        print("Completed in {:.2f} sec".format(stats.get("elapsed_sec", 0.0)))
 
 def print_peak_table(
     peaks_array,
