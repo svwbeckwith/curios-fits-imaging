@@ -7,7 +7,7 @@ License: MIT
 Keywords: astronomy,FITS,astrophotography,photometry,image-processing
 Requires-Python: >=3.12
 Description-Content-Type: text/markdown
-Requires-Dist: numpy
+Requires-Dist: numpy<2,>=1.26
 Requires-Dist: scipy
 Requires-Dist: matplotlib
 Requires-Dist: astropy

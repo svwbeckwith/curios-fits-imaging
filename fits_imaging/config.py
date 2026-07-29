@@ -18,8 +18,8 @@ class ImagingConfig:
     pixel_arcsec: float = 1.55
 
     # Peak finding
-    threshold_sigma: float = 5.0
-    max_peaks: int = 1000
+    threshold_sigma: float = 10.0
+    max_peaks: int = 100
     peak_separation: float = 10.0
     peak_sharp: float = 0.2
     fit_method: str = "gaussian"
