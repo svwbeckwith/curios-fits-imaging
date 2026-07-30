@@ -44,13 +44,13 @@ results.report(config=config)
 
 ## Screenshot
 
-![Standard Report](Figures/Screenshot 2026-07-07 at 12.05.18 PM.png)
+![Standard Report](Figures/Screenshot_2026-07-07_at_12.05.18_PM.png)
 
-![Standard Report](Figures/Screenshot 2026-07-07 at 12.05.41 PM.png)
+![Standard Report](Figures/Screenshot_2026-07-07_at_12.05.41_PM.png)
 
-![Standard Report](Figures/Screenshot 2026-07-07 at 12.06.01 PM.png)
+![Standard Report](Figures/Screenshot_2026-07-07_at_12.06.01_PM.png)
 
-![Standard Report](Figures/Screenshot 2026-07-07 at 12.06.18 PM.png)
+![Standard Report](Figures/Screenshot_2026-07-07_at_12.06.18_PM.png)
 ---
 
 ## Features
