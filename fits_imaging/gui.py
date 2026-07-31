@@ -24,7 +24,10 @@ ANALYSIS_MODE_LABELS = {
 }
 
 MAX_DISPLAY_PIXELS = 2_000_000
-DEFAULT_CUTOUT_HALF_SIZE = 30
+DEFAULT_CUTOUT_SIZE = 81
+MIN_CUTOUT_SIZE = 49
+MAX_CUTOUT_SIZE = 1001
+IMAGE_ORIGIN = "upper"
 
 
 class MissingGuiDependencyError(RuntimeError):
@@ -131,7 +134,15 @@ def peak_rows(result, config=None):
     return rows
 
 
-def peak_cutout(image, peak, half_size=DEFAULT_CUTOUT_HALF_SIZE):
+def cutout_half_size(cutout_size=DEFAULT_CUTOUT_SIZE):
+    """Return a centered half-size from a requested full cutout size."""
+    cutout_size = int(cutout_size)
+    if cutout_size < MIN_CUTOUT_SIZE:
+        cutout_size = MIN_CUTOUT_SIZE
+    return cutout_size // 2
+
+
+def peak_cutout(image, peak, half_size=None, cutout_size=DEFAULT_CUTOUT_SIZE):
     """Return cutout bounds and local peak coordinates."""
     image = np.asarray(image)
     x = float(peak[0])
@@ -139,6 +150,8 @@ def peak_cutout(image, peak, half_size=DEFAULT_CUTOUT_HALF_SIZE):
     ny, nx = image.shape
     ix = int(round(x))
     iy = int(round(y))
+    if half_size is None:
+        half_size = cutout_half_size(cutout_size)
     x0 = max(ix - half_size, 0)
     x1 = min(ix + half_size + 1, nx)
     y0 = max(iy - half_size, 0)
@@ -209,13 +222,13 @@ def create_app_class(qt):
             layout.addWidget(self.canvas, 1)
             layout.addWidget(self.details)
 
-        def show_peak(self, result, peak_index, config):
+        def show_peak(self, result, peak_index, config, cutout_size=DEFAULT_CUTOUT_SIZE):
             peaks = result.peak_array
             if peak_index < 0 or peak_index >= len(peaks):
                 return
 
             peak = peaks[peak_index]
-            cutout = peak_cutout(result.display_image, peak)
+            cutout = peak_cutout(result.display_image, peak, cutout_size=cutout_size)
             rows = peak_rows(result, config=config)
             row = rows[peak_index]
 
@@ -228,18 +241,20 @@ def create_app_class(qt):
                 vmax=vmax,
                 stretch=getattr(config, "stretch", "linear"),
             )
-            ax.imshow(display_image, origin="lower", vmin=0, vmax=1, cmap=getattr(config, "colormap", "viridis"))
+            ax.imshow(display_image, origin=IMAGE_ORIGIN, vmin=0, vmax=1, cmap=getattr(config, "colormap", "viridis"))
             ax.plot(
-                cutout["local_x"],
-                cutout["local_y"],
+                row["x"],
+                row["y"],
                 marker="+",
                 markersize=14,
                 markeredgewidth=2,
                 color="yellow",
             )
             ax.set_title(f"Peak {peak_index}: x={row['x']:.2f}, y={row['y']:.2f}")
-            ax.set_xlabel("Cutout X pixel")
-            ax.set_ylabel("Cutout Y pixel")
+            ax.set_xlim(cutout["x0"] - 0.5, cutout["x1"] - 0.5)
+            ax.set_ylim(cutout["y1"] - 0.5, cutout["y0"] - 0.5)
+            ax.set_xlabel("X pixel")
+            ax.set_ylabel("Y pixel")
             ax.text(
                 0.02,
                 0.98,
@@ -357,6 +372,15 @@ def create_app_class(qt):
             right.addWidget(QLabel("Fit method"))
             right.addWidget(self.fit_method)
 
+            self.cutout_size = QSpinBox()
+            self.cutout_size.setRange(MIN_CUTOUT_SIZE, MAX_CUTOUT_SIZE)
+            self.cutout_size.setSingleStep(20)
+            self.cutout_size.setValue(DEFAULT_CUTOUT_SIZE)
+            self.cutout_size.setSuffix(" px")
+            self.cutout_size.valueChanged.connect(self.refresh_selected_peak)
+            right.addWidget(QLabel("Peak cutout size"))
+            right.addWidget(self.cutout_size)
+
             self.show_peaks = QCheckBox("Show detected peaks")
             self.show_peaks.setChecked(True)
             right.addWidget(self.show_peaks)
@@ -470,16 +494,15 @@ def create_app_class(qt):
             ny, nx = image.shape
             ax.imshow(
                 display_image,
-                origin="lower",
+                origin=IMAGE_ORIGIN,
                 vmin=0,
                 vmax=1,
                 cmap=self.config.colormap,
-                extent=(0, nx, 0, ny),
+                extent=(0, nx, ny, 0),
             )
             ax.set_title(title)
             ax.set_xlabel("X pixel")
             ax.set_ylabel("Y pixel")
-            ax.invert_yaxis()
             if stride > 1:
                 ax.text(
                     0.01,
@@ -590,6 +613,16 @@ def create_app_class(qt):
             peak_index = selected[0].row()
             self.show_peak_window(peak_index)
 
+        def refresh_selected_peak(self):
+            if self.current_result is None:
+                return
+
+            selected = self.peaks_table.selectedItems()
+            if not selected:
+                return
+
+            self.show_peak_window(selected[0].row())
+
         def show_peak_window(self, peak_index):
             if self.current_result is None:
                 return
@@ -597,7 +630,12 @@ def create_app_class(qt):
             if self.peak_window is None:
                 self.peak_window = PeakWindow(self)
 
-            self.peak_window.show_peak(self.current_result, peak_index, self.config)
+            self.peak_window.show_peak(
+                self.current_result,
+                peak_index,
+                self.config,
+                cutout_size=self.cutout_size.value(),
+            )
 
         def export_summary(self):
             if self.current_result is None:

@@ -55,6 +55,25 @@ def test_peak_cutout_returns_local_peak_coordinates():
     assert cutout["local_y"] == 5.0
 
 
+def test_peak_cutout_default_is_larger_than_48_pixels():
+    image = np.zeros((200, 200))
+    peak = np.array([100.0, 100.0, 100.0, 1.0, 2.0, 5000.0])
+
+    cutout = gui.peak_cutout(image, peak)
+
+    assert cutout["image"].shape[0] > 48
+    assert cutout["image"].shape[1] > 48
+
+
+def test_peak_cutout_accepts_larger_requested_sizes():
+    image = np.zeros((300, 300))
+    peak = np.array([150.0, 150.0, 100.0, 1.0, 2.0, 5000.0])
+
+    cutout = gui.peak_cutout(image, peak, cutout_size=151)
+
+    assert cutout["image"].shape == (151, 151)
+
+
 def test_peak_display_limits_use_local_cutout_range():
     image = np.array([[1.0, 2.0], [3.0, 1000.0]])
 
