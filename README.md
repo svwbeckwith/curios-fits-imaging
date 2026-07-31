@@ -81,7 +81,7 @@ curios-fits-imaging/
 
 ├── fits_imaging/
 │   ├── analysis.py
-├──│   ├── config.py
+│   ├── config.py
 │   ├── diagnostics.py
 │   ├── export.py
 │   ├── fits_io.py
