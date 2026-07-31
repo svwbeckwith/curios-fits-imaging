@@ -185,6 +185,11 @@ def peak_display_limits(cutout_image, percentiles=(0.5, 99.5)):
     return float(vmin), float(vmax)
 
 
+def cutout_extent(cutout):
+    """Return imshow extent for absolute image coordinates with row index increasing downward."""
+    return (cutout["x0"] - 0.5, cutout["x1"] - 0.5, cutout["y1"] - 0.5, cutout["y0"] - 0.5)
+
+
 def create_app_class(qt):
     Qt = qt["Qt"]
     QCheckBox = qt["QCheckBox"]
@@ -241,7 +246,14 @@ def create_app_class(qt):
                 vmax=vmax,
                 stretch=getattr(config, "stretch", "linear"),
             )
-            ax.imshow(display_image, origin=IMAGE_ORIGIN, vmin=0, vmax=1, cmap=getattr(config, "colormap", "viridis"))
+            ax.imshow(
+                display_image,
+                origin=IMAGE_ORIGIN,
+                vmin=0,
+                vmax=1,
+                cmap=getattr(config, "colormap", "viridis"),
+                extent=cutout_extent(cutout),
+            )
             ax.plot(
                 row["x"],
                 row["y"],

@@ -74,6 +74,14 @@ def test_peak_cutout_accepts_larger_requested_sizes():
     assert cutout["image"].shape == (151, 151)
 
 
+def test_cutout_extent_uses_absolute_coordinates_with_y_increasing_downward():
+    cutout = {"x0": 10, "x1": 21, "y0": 30, "y1": 41}
+
+    extent = gui.cutout_extent(cutout)
+
+    assert extent == (9.5, 20.5, 40.5, 29.5)
+
+
 def test_peak_display_limits_use_local_cutout_range():
     image = np.array([[1.0, 2.0], [3.0, 1000.0]])
 
