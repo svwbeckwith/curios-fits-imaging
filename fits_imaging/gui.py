@@ -258,9 +258,19 @@ def create_app_class(qt):
                 row["x"],
                 row["y"],
                 marker="+",
-                markersize=14,
-                markeredgewidth=2,
-                color="yellow",
+                markersize=22,
+                markeredgewidth=4,
+                color="black",
+                linestyle="none",
+            )
+            ax.plot(
+                row["x"],
+                row["y"],
+                marker="+",
+                markersize=18,
+                markeredgewidth=2.5,
+                color="red",
+                linestyle="none",
             )
             ax.set_title(f"Peak {peak_index}: x={row['x']:.2f}, y={row['y']:.2f}")
             ax.set_xlim(cutout["x0"] - 0.5, cutout["x1"] - 0.5)
