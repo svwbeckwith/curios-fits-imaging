@@ -16,6 +16,26 @@ The project is designed to be used from Jupyter Lab today and will evolve into a
 
 ---
 
+## Quick start-up
+
+To activate the environment and use the GUI:
+
+```bash
+conda activate curios-fits
+cd /Users/svwbeckwith/Dropbox/CuRIOS/Software/curios-fits-imaging
+curios-fits-gui
+```
+
+To use the Jupyter notebook in the browser:
+
+```bash
+conda activate curios-fits
+cd /Users/svwbeckwith/Dropbox/CuRIOS/Software/curios-fits-imaging
+jupyter lab
+```
+
+---
+
 ## Example
 
 ```python
