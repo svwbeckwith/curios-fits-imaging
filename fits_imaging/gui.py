@@ -23,8 +23,8 @@ ANALYSIS_MODE_LABELS = {
     "Rotation/blur diagnostics": "rotation_blur",
 }
 
-CUTOUT_DISPLAY_PRESETS = ("Standard", "Bahtinov", "Percentile", "Manual")
-CUTOUT_STRETCHES = ("linear", "sqrt", "log")
+DISPLAY_PRESETS = ("Standard", "Bahtinov", "Percentile", "Manual")
+DISPLAY_STRETCHES = ("linear", "sqrt", "log")
 
 MAX_DISPLAY_PIXELS = 2_000_000
 DEFAULT_CUTOUT_SIZE = 81
@@ -223,6 +223,34 @@ def configure_cutout_display(
         config.cutout_stretch = stretch
 
 
+def configure_main_display(
+    config,
+    preset,
+    *,
+    stretch="linear",
+    percentile_low=1.0,
+    percentile_high=99.5,
+    manual_vmin=0.0,
+    manual_vmax=65535.0,
+):
+    """Apply GUI main-image controls independently of cutout controls."""
+    if preset == "Standard":
+        config.use_standard_main_display()
+    elif preset == "Bahtinov":
+        config.use_bahtinov_main_display()
+    elif preset == "Percentile":
+        if not 0.0 <= percentile_low < percentile_high <= 100.0:
+            raise ValueError("percentile low must be less than high (0 to 100)")
+        config.use_percentile_main_display(percentile_low, percentile_high, stretch=stretch)
+    elif preset == "Manual":
+        config.use_manual_main_display(manual_vmin, manual_vmax, stretch=stretch)
+    else:
+        raise ValueError(f"Unknown main-image display preset: {preset}")
+
+    if preset in {"Standard", "Bahtinov"} and stretch is not None:
+        config.stretch = stretch
+
+
 def create_app_class(qt):
     Qt = qt["Qt"]
     QCheckBox = qt["QCheckBox"]
@@ -346,6 +374,9 @@ def create_app_class(qt):
             self.current_image_path = None
             self.current_result = None
             self.peak_window = None
+            self.current_display_image = None
+            self.current_display_title = ""
+            self.current_display_peaks = None
 
             self.config = ImagingConfig()
             self._build_ui()
@@ -439,14 +470,57 @@ def create_app_class(qt):
             right.addWidget(QLabel("Peak cutout size"))
             right.addWidget(self.cutout_size)
 
-            right.addWidget(QLabel("Cutout brightness preset"))
+            right.addWidget(QLabel("Main image brightness"))
+            self.main_preset = QComboBox()
+            self.main_preset.addItems(DISPLAY_PRESETS)
+            right.addWidget(self.main_preset)
+
+            main_display_row = QHBoxLayout()
+            self.main_stretch = QComboBox()
+            self.main_stretch.addItems(DISPLAY_STRETCHES)
+            self.main_percentile_low = QDoubleSpinBox()
+            self.main_percentile_low.setRange(0.0, 99.99)
+            self.main_percentile_low.setDecimals(2)
+            self.main_percentile_low.setValue(self.config.contrast_percentiles[0])
+            self.main_percentile_high = QDoubleSpinBox()
+            self.main_percentile_high.setRange(0.01, 100.0)
+            self.main_percentile_high.setDecimals(2)
+            self.main_percentile_high.setValue(self.config.contrast_percentiles[1])
+            main_display_row.addWidget(QLabel("Stretch / percentiles"))
+            main_display_row.addWidget(self.main_stretch)
+            main_display_row.addWidget(self.main_percentile_low)
+            main_display_row.addWidget(self.main_percentile_high)
+            right.addLayout(main_display_row)
+
+            main_manual_row = QHBoxLayout()
+            self.main_manual_vmin = QDoubleSpinBox()
+            self.main_manual_vmin.setRange(-1.0e12, 1.0e12)
+            self.main_manual_vmin.setDecimals(3)
+            self.main_manual_vmax = QDoubleSpinBox()
+            self.main_manual_vmax.setRange(-1.0e12, 1.0e12)
+            self.main_manual_vmax.setDecimals(3)
+            self.main_manual_vmax.setValue(65535.0)
+            main_manual_row.addWidget(QLabel("Main min/max"))
+            main_manual_row.addWidget(self.main_manual_vmin)
+            main_manual_row.addWidget(self.main_manual_vmax)
+            right.addLayout(main_manual_row)
+
+            self.main_preset.currentTextChanged.connect(self.on_main_preset_changed)
+            self.main_stretch.currentTextChanged.connect(self.update_main_display_from_controls)
+            self.main_percentile_low.valueChanged.connect(self.update_main_display_from_controls)
+            self.main_percentile_high.valueChanged.connect(self.update_main_display_from_controls)
+            self.main_manual_vmin.valueChanged.connect(self.update_main_display_from_controls)
+            self.main_manual_vmax.valueChanged.connect(self.update_main_display_from_controls)
+            self.update_main_control_state()
+
+            right.addWidget(QLabel("Cutout brightness"))
             self.cutout_preset = QComboBox()
-            self.cutout_preset.addItems(CUTOUT_DISPLAY_PRESETS)
+            self.cutout_preset.addItems(DISPLAY_PRESETS)
             right.addWidget(self.cutout_preset)
 
             right.addWidget(QLabel("Cutout stretch"))
             self.cutout_stretch = QComboBox()
-            self.cutout_stretch.addItems(CUTOUT_STRETCHES)
+            self.cutout_stretch.addItems(DISPLAY_STRETCHES)
             self.cutout_stretch.setCurrentText(self.config.cutout_stretch)
             right.addWidget(self.cutout_stretch)
 
@@ -533,6 +607,9 @@ def create_app_class(qt):
             self.file_table.clear()
             self.current_image_path = None
             self.current_result = None
+            self.current_display_image = None
+            self.current_display_title = ""
+            self.current_display_peaks = None
             self.clear_peak_table()
             self.figure.clear()
             self.canvas.draw_idle()
@@ -591,6 +668,9 @@ def create_app_class(qt):
                 self.show_error("Could not preview image", exc)
 
         def draw_image(self, image, title="", peaks=None):
+            self.current_display_image = image
+            self.current_display_title = title
+            self.current_display_peaks = peaks
             self.figure.clear()
             ax = self.figure.add_subplot(111)
             vmin, vmax = display_limits(image, config=self.config)
@@ -643,6 +723,54 @@ def create_app_class(qt):
             self.cutout_percentile_high.setEnabled(percentile_enabled)
             self.cutout_manual_vmin.setEnabled(manual_enabled)
             self.cutout_manual_vmax.setEnabled(manual_enabled)
+
+        def update_main_control_state(self):
+            """Enable only the main-image fields used by the selected preset."""
+            preset = self.main_preset.currentText()
+            percentile_enabled = preset == "Percentile"
+            manual_enabled = preset == "Manual"
+            self.main_percentile_low.setEnabled(percentile_enabled)
+            self.main_percentile_high.setEnabled(percentile_enabled)
+            self.main_manual_vmin.setEnabled(manual_enabled)
+            self.main_manual_vmax.setEnabled(manual_enabled)
+
+        def on_main_preset_changed(self, preset):
+            """Load main-image preset defaults and redraw the image."""
+            if preset == "Standard":
+                stretch = "linear"
+            elif preset == "Bahtinov":
+                stretch = "sqrt"
+            else:
+                stretch = self.main_stretch.currentText()
+
+            self.main_stretch.blockSignals(True)
+            self.main_stretch.setCurrentText(stretch)
+            self.main_stretch.blockSignals(False)
+            self.update_main_control_state()
+            self.update_main_display_from_controls()
+
+        def update_main_display_from_controls(self, *_args):
+            """Apply main-image settings and redraw without reanalysis."""
+            try:
+                configure_main_display(
+                    self.config,
+                    self.main_preset.currentText(),
+                    stretch=self.main_stretch.currentText(),
+                    percentile_low=self.main_percentile_low.value(),
+                    percentile_high=self.main_percentile_high.value(),
+                    manual_vmin=self.main_manual_vmin.value(),
+                    manual_vmax=self.main_manual_vmax.value(),
+                )
+            except ValueError as exc:
+                self.status.setText(f"Main image display settings: {exc}")
+                return
+
+            if self.current_display_image is not None:
+                self.draw_image(
+                    self.current_display_image,
+                    title=self.current_display_title,
+                    peaks=self.current_display_peaks,
+                )
 
         def on_cutout_preset_changed(self, preset):
             """Load preset defaults and refresh the selected cutout."""

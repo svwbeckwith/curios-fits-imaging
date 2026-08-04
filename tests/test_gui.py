@@ -141,3 +141,44 @@ def test_configure_cutout_display_rejects_invalid_percentiles():
             percentile_low=99.0,
             percentile_high=1.0,
         )
+
+
+@pytest.mark.parametrize(
+    ("preset", "expected_method", "expected_stretch"),
+    [
+        ("Standard", "sigma", "linear"),
+        ("Bahtinov", "sigma", "sqrt"),
+        ("Percentile", "percentile", "log"),
+        ("Manual", "manual", "log"),
+    ],
+)
+def test_configure_main_display_is_independent_of_cutouts(preset, expected_method, expected_stretch):
+    config = ImagingConfig()
+    config.use_bahtinov_display()
+    original_cutout = (
+        config.cutout_contrast_method,
+        config.cutout_contrast_sigma_high,
+        config.cutout_stretch,
+    )
+
+    gui.configure_main_display(
+        config,
+        preset,
+        stretch="log" if preset in {"Percentile", "Manual"} else expected_stretch,
+        percentile_low=2.0,
+        percentile_high=98.0,
+        manual_vmin=100.0,
+        manual_vmax=2000.0,
+    )
+
+    assert config.contrast_method == expected_method
+    assert config.stretch == expected_stretch
+    assert (
+        config.cutout_contrast_method,
+        config.cutout_contrast_sigma_high,
+        config.cutout_stretch,
+    ) == original_cutout
+    if preset == "Percentile":
+        assert config.contrast_percentiles == (2.0, 98.0)
+    if preset == "Manual":
+        assert (config.manual_vmin, config.manual_vmax) == (100.0, 2000.0)

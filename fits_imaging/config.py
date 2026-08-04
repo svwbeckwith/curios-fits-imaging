@@ -30,6 +30,8 @@ class ImagingConfig:
     contrast_sigma_low: float = 1.0
     contrast_sigma_high: float = 5.0
     stretch: str = "linear"
+    manual_vmin: Optional[float] = None
+    manual_vmax: Optional[float] = None
 
     # Cutout display (independent of the full-image display settings).
     # Supported methods are "sigma", "percentile", "zscale", and "manual".
@@ -65,6 +67,41 @@ class ImagingConfig:
     def __post_init__(self):
         if self.data_root is not None:
             self.data_root = Path(self.data_root).expanduser().resolve()
+
+    def use_standard_main_display(self):
+        """Use balanced display settings for the full image."""
+        self.contrast_method = "sigma"
+        self.contrast_sigma_low = 1.0
+        self.contrast_sigma_high = 5.0
+        self.stretch = "linear"
+        self.manual_vmin = None
+        self.manual_vmax = None
+
+    def use_bahtinov_main_display(self):
+        """Saturate the full-image core to emphasize faint mask arms."""
+        self.contrast_method = "sigma"
+        self.contrast_sigma_low = 0.5
+        self.contrast_sigma_high = 2.0
+        self.stretch = "sqrt"
+        self.manual_vmin = None
+        self.manual_vmax = None
+
+    def use_percentile_main_display(self, low=1.0, high=99.5, stretch="linear"):
+        """Scale the full image from the requested percentile range."""
+        self.contrast_method = "percentile"
+        self.contrast_percentiles = (float(low), float(high))
+        self.stretch = stretch
+        self.manual_vmin = None
+        self.manual_vmax = None
+
+    def use_manual_main_display(self, vmin, vmax, stretch="linear"):
+        """Use fixed data limits for the full image."""
+        if vmax <= vmin:
+            raise ValueError("main-image vmax must be greater than vmin")
+        self.contrast_method = "manual"
+        self.manual_vmin = float(vmin)
+        self.manual_vmax = float(vmax)
+        self.stretch = stretch
 
     def use_standard_cutout_display(self):
         """Use balanced display settings for ordinary stellar cutouts."""
