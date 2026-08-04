@@ -9,7 +9,7 @@ import pandas as pd
 
 from .analysis import analyze_image, normalize_analysis_mode
 from .config import ImagingConfig
-from .contrast import apply_stretch, display_limits, percentile_limits
+from .contrast import apply_stretch, cutout_display_limits, display_limits, percentile_limits
 from .fits_io import read_fits_image
 from .photometry import counts_to_mag
 from .run import ImagingRun
@@ -239,19 +239,22 @@ def create_app_class(qt):
 
             self.figure.clear()
             ax = self.figure.add_subplot(111)
-            vmin, vmax = peak_display_limits(cutout["image"])
+            vmin, vmax = cutout_display_limits(cutout["image"], config=config)
             display_image = apply_stretch(
                 cutout["image"],
                 vmin=vmin,
                 vmax=vmax,
-                stretch=getattr(config, "stretch", "linear"),
+                stretch=getattr(config, "cutout_stretch", "linear"),
             )
+            cmap = getattr(config, "cutout_colormap", None) or getattr(config, "colormap", "viridis")
+            if getattr(config, "invert_colormap", False) and not cmap.endswith("_r"):
+                cmap += "_r"
             ax.imshow(
                 display_image,
                 origin=IMAGE_ORIGIN,
                 vmin=0,
                 vmax=1,
-                cmap=getattr(config, "colormap", "viridis"),
+                cmap=cmap,
                 extent=cutout_extent(cutout),
             )
             ax.plot(

@@ -106,6 +106,42 @@ def display_limits(image, config=None, method=None):
 
     raise ValueError(f"Unknown contrast method: {method}")
 
+
+def cutout_display_limits(image, config=None, method=None):
+    """Return cutout-specific limits without changing full-image settings.
+
+    A config created before cutout controls were added falls back to the
+    standard cutout defaults, keeping existing callers working unchanged.
+    """
+    method = method or getattr(config, "cutout_contrast_method", "sigma")
+
+    if method == "zscale":
+        return zscale_limits(image)
+
+    if method == "percentile":
+        percentiles = getattr(config, "cutout_contrast_percentiles", (1.0, 99.5))
+        return percentile_limits(image, percentiles)
+
+    if method == "sigma":
+        nsigma = getattr(config, "cutout_contrast_sigma", 5.0)
+        return sigma_limits(
+            image,
+            nsigma=nsigma,
+            nsigma_low=getattr(config, "cutout_contrast_sigma_low", 1.0),
+            nsigma_high=getattr(config, "cutout_contrast_sigma_high", nsigma),
+        )
+
+    if method == "manual":
+        vmin = getattr(config, "cutout_vmin", None)
+        vmax = getattr(config, "cutout_vmax", None)
+        if vmin is None or vmax is None:
+            raise ValueError("manual cutout contrast requires cutout_vmin and cutout_vmax")
+        if vmax <= vmin:
+            raise ValueError("cutout_vmax must be greater than cutout_vmin")
+        return vmin, vmax
+
+    raise ValueError(f"Unknown cutout contrast method: {method}")
+
 def apply_stretch(image, vmin=None, vmax=None, stretch="linear"):
     """Return display-scaled image after optional linear/sqrt/log stretch."""
     arr = np.asarray(image, dtype=float)

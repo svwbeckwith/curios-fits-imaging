@@ -7,7 +7,7 @@ import numpy as np
 
 from . import plot_style as style
 
-from .contrast import display_limits, apply_stretch
+from .contrast import apply_stretch, cutout_display_limits, display_limits
 
 def _peak_xy(peak):
     """Return x, y from either a FitPeak object or a numeric peak row."""
@@ -48,7 +48,7 @@ def plot_image_with_peaks(
         if not cmap.endswith("_r"):
             cmap += "_r"
             
-    ax.imshow(display_image, origin="lower", vmin=0, vmax=1)
+    ax.imshow(display_image, origin="lower", vmin=0, vmax=1, cmap=cmap)
     
     ax.set_title(title, fontsize=style.MAIN_TITLE_SIZE)
     ax.set_xlabel("X pixel", fontsize=style.MAIN_LABEL_SIZE)
@@ -156,7 +156,14 @@ def plot_peak_cutouts(
 
         cutout = image[y0:y1, x0:x1]
 
-        ax.imshow(cutout, origin="lower") #, cmap="gray")
+        vmin, vmax = cutout_display_limits(cutout, config=config)
+        stretch = getattr(config, "cutout_stretch", "linear")
+        display_cutout = apply_stretch(cutout, vmin=vmin, vmax=vmax, stretch=stretch)
+        cmap = getattr(config, "cutout_colormap", None) or getattr(config, "colormap", "viridis")
+        if getattr(config, "invert_colormap", False) and not cmap.endswith("_r"):
+            cmap += "_r"
+
+        ax.imshow(display_cutout, origin="lower", vmin=0, vmax=1, cmap=cmap)
         ax.set_title(f"Peak {i}", fontsize=style.CUTOUT_TITLE_SIZE)
         ax.tick_params(labelsize=style.CUTOUT_TICK_SIZE)
 

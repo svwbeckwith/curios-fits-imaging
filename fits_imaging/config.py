@@ -31,6 +31,17 @@ class ImagingConfig:
     contrast_sigma_high: float = 5.0
     stretch: str = "linear"
 
+    # Cutout display (independent of the full-image display settings).
+    # Supported methods are "sigma", "percentile", "zscale", and "manual".
+    cutout_contrast_method: str = "sigma"
+    cutout_contrast_percentiles: tuple = (1.0, 99.5)
+    cutout_contrast_sigma_low: float = 1.0
+    cutout_contrast_sigma_high: float = 5.0
+    cutout_stretch: str = "linear"
+    cutout_colormap: Optional[str] = None
+    cutout_vmin: Optional[float] = None
+    cutout_vmax: Optional[float] = None
+
     show_grid = True
     show_peak_labels = True
     show_center_cross = True
@@ -54,3 +65,38 @@ class ImagingConfig:
     def __post_init__(self):
         if self.data_root is not None:
             self.data_root = Path(self.data_root).expanduser().resolve()
+
+    def use_standard_cutout_display(self):
+        """Use balanced display settings for ordinary stellar cutouts."""
+        self.cutout_contrast_method = "sigma"
+        self.cutout_contrast_sigma_low = 1.0
+        self.cutout_contrast_sigma_high = 5.0
+        self.cutout_stretch = "linear"
+        self.cutout_vmin = None
+        self.cutout_vmax = None
+
+    def use_bahtinov_display(self):
+        """Saturate bright cores to emphasize faint Bahtinov-mask arms."""
+        self.cutout_contrast_method = "sigma"
+        self.cutout_contrast_sigma_low = 0.5
+        self.cutout_contrast_sigma_high = 2.0
+        self.cutout_stretch = "sqrt"
+        self.cutout_vmin = None
+        self.cutout_vmax = None
+
+    def use_percentile_cutout_display(self, low=1.0, high=99.5, stretch="linear"):
+        """Scale each cutout from the requested percentile range."""
+        self.cutout_contrast_method = "percentile"
+        self.cutout_contrast_percentiles = (float(low), float(high))
+        self.cutout_stretch = stretch
+        self.cutout_vmin = None
+        self.cutout_vmax = None
+
+    def use_manual_cutout_display(self, vmin, vmax, stretch="linear"):
+        """Use fixed data limits for every cutout."""
+        if vmax <= vmin:
+            raise ValueError("cutout vmax must be greater than vmin")
+        self.cutout_contrast_method = "manual"
+        self.cutout_vmin = float(vmin)
+        self.cutout_vmax = float(vmax)
+        self.cutout_stretch = stretch
