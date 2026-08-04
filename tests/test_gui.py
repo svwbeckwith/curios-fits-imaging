@@ -1,9 +1,11 @@
 import importlib.util
 
 import numpy as np
+import pytest
 from types import SimpleNamespace
 
 from fits_imaging import gui
+from fits_imaging.config import ImagingConfig
 
 
 def test_gui_module_imports_without_pyside6():
@@ -99,3 +101,43 @@ def test_peak_display_limits_handles_flat_cutout():
 
     assert vmin == 6.0
     assert vmax == 8.0
+
+
+@pytest.mark.parametrize(
+    ("preset", "expected_method", "expected_stretch"),
+    [
+        ("Standard", "sigma", "linear"),
+        ("Bahtinov", "sigma", "sqrt"),
+        ("Percentile", "percentile", "log"),
+        ("Manual", "manual", "log"),
+    ],
+)
+def test_configure_cutout_display_presets(preset, expected_method, expected_stretch):
+    config = ImagingConfig()
+
+    gui.configure_cutout_display(
+        config,
+        preset,
+        stretch="log" if preset in {"Percentile", "Manual"} else expected_stretch,
+        percentile_low=2.0,
+        percentile_high=98.0,
+        manual_vmin=100.0,
+        manual_vmax=2000.0,
+    )
+
+    assert config.cutout_contrast_method == expected_method
+    assert config.cutout_stretch == expected_stretch
+    if preset == "Percentile":
+        assert config.cutout_contrast_percentiles == (2.0, 98.0)
+    if preset == "Manual":
+        assert (config.cutout_vmin, config.cutout_vmax) == (100.0, 2000.0)
+
+
+def test_configure_cutout_display_rejects_invalid_percentiles():
+    with pytest.raises(ValueError, match="percentile low"):
+        gui.configure_cutout_display(
+            ImagingConfig(),
+            "Percentile",
+            percentile_low=99.0,
+            percentile_high=1.0,
+        )

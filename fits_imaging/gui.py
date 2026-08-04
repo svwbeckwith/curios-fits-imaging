@@ -23,6 +23,9 @@ ANALYSIS_MODE_LABELS = {
     "Rotation/blur diagnostics": "rotation_blur",
 }
 
+CUTOUT_DISPLAY_PRESETS = ("Standard", "Bahtinov", "Percentile", "Manual")
+CUTOUT_STRETCHES = ("linear", "sqrt", "log")
+
 MAX_DISPLAY_PIXELS = 2_000_000
 DEFAULT_CUTOUT_SIZE = 81
 MIN_CUTOUT_SIZE = 49
@@ -188,6 +191,36 @@ def peak_display_limits(cutout_image, percentiles=(0.5, 99.5)):
 def cutout_extent(cutout):
     """Return imshow extent for absolute image coordinates with row index increasing downward."""
     return (cutout["x0"] - 0.5, cutout["x1"] - 0.5, cutout["y1"] - 0.5, cutout["y0"] - 0.5)
+
+
+def configure_cutout_display(
+    config,
+    preset,
+    *,
+    stretch="linear",
+    percentile_low=1.0,
+    percentile_high=99.5,
+    manual_vmin=0.0,
+    manual_vmax=65535.0,
+):
+    """Apply GUI cutout controls to an ImagingConfig instance."""
+    if preset == "Standard":
+        config.use_standard_cutout_display()
+    elif preset == "Bahtinov":
+        config.use_bahtinov_display()
+    elif preset == "Percentile":
+        if not 0.0 <= percentile_low < percentile_high <= 100.0:
+            raise ValueError("percentile low must be less than high (0 to 100)")
+        config.use_percentile_cutout_display(percentile_low, percentile_high, stretch=stretch)
+    elif preset == "Manual":
+        config.use_manual_cutout_display(manual_vmin, manual_vmax, stretch=stretch)
+    else:
+        raise ValueError(f"Unknown cutout display preset: {preset}")
+
+    # Standard and Bahtinov set their recommended stretch when selected. The
+    # GUI may subsequently override it through the independent stretch menu.
+    if preset in {"Standard", "Bahtinov"} and stretch is not None:
+        config.cutout_stretch = stretch
 
 
 def create_app_class(qt):
@@ -406,6 +439,53 @@ def create_app_class(qt):
             right.addWidget(QLabel("Peak cutout size"))
             right.addWidget(self.cutout_size)
 
+            right.addWidget(QLabel("Cutout brightness preset"))
+            self.cutout_preset = QComboBox()
+            self.cutout_preset.addItems(CUTOUT_DISPLAY_PRESETS)
+            right.addWidget(self.cutout_preset)
+
+            right.addWidget(QLabel("Cutout stretch"))
+            self.cutout_stretch = QComboBox()
+            self.cutout_stretch.addItems(CUTOUT_STRETCHES)
+            self.cutout_stretch.setCurrentText(self.config.cutout_stretch)
+            right.addWidget(self.cutout_stretch)
+
+            percentile_row = QHBoxLayout()
+            self.cutout_percentile_low = QDoubleSpinBox()
+            self.cutout_percentile_low.setRange(0.0, 99.99)
+            self.cutout_percentile_low.setDecimals(2)
+            self.cutout_percentile_low.setValue(self.config.cutout_contrast_percentiles[0])
+            self.cutout_percentile_high = QDoubleSpinBox()
+            self.cutout_percentile_high.setRange(0.01, 100.0)
+            self.cutout_percentile_high.setDecimals(2)
+            self.cutout_percentile_high.setValue(self.config.cutout_contrast_percentiles[1])
+            percentile_row.addWidget(QLabel("Percentiles"))
+            percentile_row.addWidget(self.cutout_percentile_low)
+            percentile_row.addWidget(self.cutout_percentile_high)
+            right.addLayout(percentile_row)
+
+            manual_row = QHBoxLayout()
+            self.cutout_manual_vmin = QDoubleSpinBox()
+            self.cutout_manual_vmin.setRange(-1.0e12, 1.0e12)
+            self.cutout_manual_vmin.setDecimals(3)
+            self.cutout_manual_vmin.setValue(0.0)
+            self.cutout_manual_vmax = QDoubleSpinBox()
+            self.cutout_manual_vmax.setRange(-1.0e12, 1.0e12)
+            self.cutout_manual_vmax.setDecimals(3)
+            self.cutout_manual_vmax.setValue(65535.0)
+            manual_row.addWidget(QLabel("Manual min/max"))
+            manual_row.addWidget(self.cutout_manual_vmin)
+            manual_row.addWidget(self.cutout_manual_vmax)
+            right.addLayout(manual_row)
+
+            self.cutout_preset.currentTextChanged.connect(self.on_cutout_preset_changed)
+            self.cutout_stretch.currentTextChanged.connect(self.update_cutout_display_from_controls)
+            self.cutout_percentile_low.valueChanged.connect(self.update_cutout_display_from_controls)
+            self.cutout_percentile_high.valueChanged.connect(self.update_cutout_display_from_controls)
+            self.cutout_manual_vmin.valueChanged.connect(self.update_cutout_display_from_controls)
+            self.cutout_manual_vmax.valueChanged.connect(self.update_cutout_display_from_controls)
+            self.update_cutout_control_state()
+
             self.show_peaks = QCheckBox("Show detected peaks")
             self.show_peaks.setChecked(True)
             right.addWidget(self.show_peaks)
@@ -553,6 +633,49 @@ def create_app_class(qt):
             self.config.peak_separation = self.peak_separation.value()
             self.config.peak_sharp = self.peak_sharp.value()
             self.config.fit_method = self.fit_method.currentText()
+
+        def update_cutout_control_state(self):
+            """Enable only the controls used by the selected preset."""
+            preset = self.cutout_preset.currentText()
+            percentile_enabled = preset == "Percentile"
+            manual_enabled = preset == "Manual"
+            self.cutout_percentile_low.setEnabled(percentile_enabled)
+            self.cutout_percentile_high.setEnabled(percentile_enabled)
+            self.cutout_manual_vmin.setEnabled(manual_enabled)
+            self.cutout_manual_vmax.setEnabled(manual_enabled)
+
+        def on_cutout_preset_changed(self, preset):
+            """Load preset defaults and refresh the selected cutout."""
+            if preset == "Standard":
+                stretch = "linear"
+            elif preset == "Bahtinov":
+                stretch = "sqrt"
+            else:
+                stretch = self.cutout_stretch.currentText()
+
+            self.cutout_stretch.blockSignals(True)
+            self.cutout_stretch.setCurrentText(stretch)
+            self.cutout_stretch.blockSignals(False)
+            self.update_cutout_control_state()
+            self.update_cutout_display_from_controls()
+
+        def update_cutout_display_from_controls(self, *_args):
+            """Apply brightness controls and redraw an open Peak Inspector."""
+            try:
+                configure_cutout_display(
+                    self.config,
+                    self.cutout_preset.currentText(),
+                    stretch=self.cutout_stretch.currentText(),
+                    percentile_low=self.cutout_percentile_low.value(),
+                    percentile_high=self.cutout_percentile_high.value(),
+                    manual_vmin=self.cutout_manual_vmin.value(),
+                    manual_vmax=self.cutout_manual_vmax.value(),
+                )
+            except ValueError as exc:
+                self.status.setText(f"Cutout display settings: {exc}")
+                return
+
+            self.refresh_selected_peak()
 
         def selected_mode(self):
             mode = ANALYSIS_MODE_LABELS[self.mode_combo.currentText()]
