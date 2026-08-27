@@ -24,12 +24,12 @@ keywords = [
 ]
 
 dependencies = [
-    "numpy>=1.26,<2",
-    "scipy",
-    "matplotlib",
-    "astropy",
-    "photutils",
-    "pandas"
+    "numpy>=2,<3",
+    "scipy>=1.13",
+    "matplotlib>=3.8.4",
+    "astropy @ git+https://github.com/rithwiksud/astropy.git@5ef78cde85fdaf07e7edb68b80062e1add366dd8",
+    "imagecodecs>=2026.1.1",
+    "pandas>=2.2.2"
 ]
 
 [project.optional-dependencies]

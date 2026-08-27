@@ -1,5 +1,33 @@
 # CuRIOS FITS Imaging
 
+## JPEG-LS compressed FITS support
+
+The FITS reader supports standard uncompressed images, the established
+Astropy compression modes (including Rice and GZIP), and CuRIOS JPEG-LS
+compressed images (`ZCMPTYPE=JPEGLS`). JPEG-LS support uses the CuRIOS Astropy
+fork pinned in `pyproject.toml` together with `imagecodecs`. The pinned commit is
+intentional so installations are reproducible while the work is not yet part of
+an official Astropy release.
+
+JPEG-LS decoding requires NumPy 2 or later. Install into a clean environment, or
+refresh an existing `curios-fits-imaging` environment after pulling dependency
+changes:
+
+```bash
+conda activate curios-fits-imaging
+python -m pip install --upgrade --force-reinstall -e ".[gui]"
+rehash
+```
+
+An editable installation continues to load application code directly from this
+repository after future pulls. Dependency changes still require rerunning the
+installation command.
+
+The pinned fork currently identifies itself with a development version number
+and may emit NumPy deprecation warnings while reading compressed-image tables.
+These warnings do not indicate lost or altered image data. Replace the pin with
+an official Astropy release once JPEG-LS support is accepted upstream.
+
 Python tools for reading, analyzing, and visualizing astronomical FITS images acquired with the CuRIOS imaging system.
 
 The package provides a modern workflow for:

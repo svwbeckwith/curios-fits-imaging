@@ -33,7 +33,10 @@ def _normalized_extensions(extensions: Iterable[str]) -> Tuple[str, ...]:
     return tuple(ext.lower() if ext.startswith(".") else "." + ext.lower() for ext in extensions)
 
 
-def list_image_files(directory: Union[str, Path], extensions: Iterable[str] = (".fits", ".fit")) -> List[Path]:
+def list_image_files(
+    directory: Union[str, Path],
+    extensions: Iterable[str] = (".fits", ".fit", ".fits.fz", ".fit.fz"),
+) -> List[Path]:
     """Return sorted image files directly inside a directory."""
     directory = Path(directory).expanduser()
     if not directory.exists():
@@ -41,7 +44,7 @@ def list_image_files(directory: Union[str, Path], extensions: Iterable[str] = ("
     if not directory.is_dir():
         raise NotADirectoryError("Not a directory: {}".format(directory))
     extensions = _normalized_extensions(extensions)
-    return sorted(p for p in directory.iterdir() if p.is_file() and p.suffix.lower() in extensions)
+    return sorted(p for p in directory.iterdir() if p.is_file() and p.name.lower().endswith(extensions))
 
 
 def list_data_directories(directory: Union[str, Path]) -> List[Path]:
@@ -83,7 +86,8 @@ def choose_directory(directory: Union[str, Path]) -> Path:
     return _choose_from_list(dirs, "Directory#   Directory", "Choose directory number: ")
 
 
-def choose_file(directory: Union[str, Path], extensions: Iterable[str] = (".fits", ".fit"),
+def choose_file(directory: Union[str, Path],
+                extensions: Iterable[str] = (".fits", ".fit", ".fits.fz", ".fit.fz"),
                 allow_subdirectory_choice: bool = True) -> Path:
     """
     Interactively choose an image file.

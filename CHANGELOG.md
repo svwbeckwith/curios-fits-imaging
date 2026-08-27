@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Add JPEG-LS compressed FITS reading through the pinned CuRIOS Astropy fork
+  and `imagecodecs`, while retaining plain, Rice, GZIP, and other existing FITS
+  modes.
+- Move the supported runtime to NumPy 2 and remove the unused Photutils
+  dependency.
+
 All notable changes to this project will be documented in this file.
 
 ---

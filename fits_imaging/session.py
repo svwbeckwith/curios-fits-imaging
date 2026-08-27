@@ -215,7 +215,11 @@ class ImagingSession:
         self.save()
         return self.current_folder
 
-    def choose_image(self, extensions=(".fits", ".fit"), change_folder=False):
+    def choose_image(
+        self,
+        extensions=(".fits", ".fit", ".fits.fz", ".fit.fz"),
+        change_folder=False,
+    ):
         """Choose an image from the current working folder.
 
         The folder is remembered between calls and across sessions.

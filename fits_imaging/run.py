@@ -13,7 +13,12 @@ from .fits_io import _header_float, exposure_info, parse_sum_frame_count
 class ImagingRun:
     """Represent one folder of FITS images."""
 
-    def __init__(self, folder, extensions=(".fits", ".fit"), read_headers=False):
+    def __init__(
+        self,
+        folder,
+        extensions=(".fits", ".fit", ".fits.fz", ".fit.fz"),
+        read_headers=False,
+    ):
         self.folder = Path(folder).expanduser()
         self.extensions = tuple(ext.lower() for ext in extensions)
         self.read_headers = read_headers
@@ -28,8 +33,7 @@ class ImagingRun:
             for entry in entries:
                 if entry.name.startswith("."):
                     continue
-                path = Path(entry.name)
-                if path.suffix.lower() in self.extensions:
+                if entry.name.lower().endswith(self.extensions):
                     files.append(self.folder / entry.name)
         return sorted(files)
 
