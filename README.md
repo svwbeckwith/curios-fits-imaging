@@ -9,6 +9,13 @@ fork pinned in `pyproject.toml` together with `imagecodecs`. The pinned commit i
 intentional so installations are reproducible while the work is not yet part of
 an official Astropy release.
 
+The reader recognizes the historical 2-byte and 4-byte 32-bit JPEG-LS tile
+containers as well as the current 8-byte length-and-baseline container. Layouts
+are selected only when their embedded plane streams have valid JPEG-LS start
+markers; malformed or ambiguous data raises an error rather than being decoded
+speculatively. The GUI also reuses its decoded preview when analysis starts,
+avoiding a second decompression of the same selected image.
+
 JPEG-LS decoding requires NumPy 2 or later. Install into a clean environment, or
 refresh an existing `curios-fits-imaging` environment after pulling dependency
 changes:

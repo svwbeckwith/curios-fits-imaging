@@ -166,10 +166,14 @@ def _rotation_blur_metrics(image):
     }
 
 
-def _stats_result(image_path, config, mode, extra_stats=None):
+def _stats_result(image_path, config, mode, extra_stats=None, record=None, image=None):
     t0 = time.time()
-    record = read_fits_image(image_path)
-    image = _image2d(record)
+    if record is None:
+        record = read_fits_image(image_path)
+    if image is None:
+        image = _image2d(record)
+    else:
+        image = np.asarray(image)
     elapsed = time.time() - t0
 
     stats = _basic_stats(image)
@@ -211,10 +215,16 @@ def analyze_fits_file(
     maxsources=400,
     fit_method="gaussian",
     threshold_sigma=10.0,
+    record=None,
+    image=None,
 ):
     """Read one FITS file and run peak finding. Returns (record, image2d, peaks_array)."""
-    record = read_fits_image(path)
-    image = record.data[0] if record.data.ndim == 3 else record.data
+    if record is None:
+        record = read_fits_image(path)
+    if image is None:
+        image = _image2d(record)
+    else:
+        image = np.asarray(image)
     t0 = time.time()
     peaks = peak_finder(
         image,
@@ -239,18 +249,22 @@ def analyze_fits_file(
     return record, image, peaks_array, stats
 
 
-def analyze_image(image_path, config, mode=None):
-    """Analyze one FITS image and return an ImagingResults object."""
+def analyze_image(image_path, config, mode=None, record=None, image=None):
+    """Analyze one FITS image, optionally reusing already-decoded data."""
     mode = normalize_analysis_mode(mode)
 
     if mode == STATISTICS_MODE:
-        return _stats_result(image_path, config, mode)
+        return _stats_result(image_path, config, mode, record=record, image=image)
 
     if mode == FOCUS_MODE:
-        return _stats_result(image_path, config, mode, extra_stats=_focus_metrics)
+        return _stats_result(
+            image_path, config, mode, extra_stats=_focus_metrics, record=record, image=image
+        )
 
     if mode == ROTATION_BLUR_MODE:
-        return _stats_result(image_path, config, mode, extra_stats=_rotation_blur_metrics)
+        return _stats_result(
+            image_path, config, mode, extra_stats=_rotation_blur_metrics, record=record, image=image
+        )
 
     t0 = time.time()
 
@@ -261,6 +275,8 @@ def analyze_image(image_path, config, mode=None):
         maxsources=config.max_peaks,
         fit_method=getattr(config, "fit_method", "gaussian"),
         threshold_sigma=getattr(config, "threshold_sigma", 10.0),
+        record=record,
+        image=image,
     )
 
     elapsed = time.time() - t0

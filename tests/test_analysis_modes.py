@@ -3,6 +3,7 @@ from astropy.io import fits
 
 from fits_imaging.analysis import analyze_image, normalize_analysis_mode
 from fits_imaging.config import ImagingConfig
+from fits_imaging.fits_io import read_fits_image
 
 
 def write_test_fits(path, image):
@@ -27,6 +28,27 @@ def test_statistics_mode_skips_peak_detection(tmp_path):
     assert result.nstars == 0
     assert result.stats["median"] == 2.5
     assert result.stats["peak_find_time_sec"] == 0.0
+
+
+def test_analysis_can_reuse_decoded_preview(tmp_path, monkeypatch):
+    path = tmp_path / "cached.fits"
+    write_test_fits(path, [[1, 2], [3, 4]])
+    record = read_fits_image(path)
+    image = record.data
+
+    def unexpected_read(_path):
+        raise AssertionError("cached analysis decoded the FITS file again")
+
+    monkeypatch.setattr("fits_imaging.analysis.read_fits_image", unexpected_read)
+    result = analyze_image(
+        path,
+        ImagingConfig(data_root=tmp_path),
+        mode="statistics",
+        record=record,
+        image=image,
+    )
+
+    assert result.stats["median"] == 2.5
 
 
 def test_focus_mode_adds_focus_metrics(tmp_path):

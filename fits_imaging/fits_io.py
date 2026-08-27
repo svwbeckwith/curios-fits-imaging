@@ -5,6 +5,11 @@ from typing import Iterable, List, Tuple, Union, Optional
 import numpy as np
 from astropy.io import fits
 
+from .jpegls_compat import install_jpegls_compatibility
+
+
+install_jpegls_compatibility()
+
 
 @dataclass
 class ImageRecord:

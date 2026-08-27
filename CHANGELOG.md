@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Read all three CuRIOS 32-bit JPEG-LS container revisions (historical 2-byte
+  and 4-byte headers plus the current length-and-baseline header), using JPEG-LS
+  marker validation to reject corrupt or ambiguous tiles.
+- Reuse the GUI's decoded preview during analysis so compressed images are not
+  decompressed twice.
 - Add JPEG-LS compressed FITS reading through the pinned CuRIOS Astropy fork
   and `imagecodecs`, while retaining plain, Rice, GZIP, and other existing FITS
   modes.

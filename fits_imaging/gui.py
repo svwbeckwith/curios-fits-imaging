@@ -419,6 +419,8 @@ def create_app_class(qt):
             self.folder = None
             self.run = None
             self.current_image_path = None
+            self.current_record = None
+            self.current_raw_image = None
             self.current_result = None
             self.peak_window = None
             self.current_display_image = None
@@ -675,6 +677,8 @@ def create_app_class(qt):
         def populate_files(self, *_args):
             self.file_table.clear()
             self.current_image_path = None
+            self.current_record = None
+            self.current_raw_image = None
             self.current_result = None
             self.current_display_image = None
             self.current_display_title = ""
@@ -729,9 +733,13 @@ def create_app_class(qt):
             self.preview_image(path)
 
         def preview_image(self, path):
+            self.current_record = None
+            self.current_raw_image = None
             try:
                 record = read_fits_image(path)
                 image = record.data[0] if record.data.ndim == 3 else record.data
+                self.current_record = record
+                self.current_raw_image = image
                 self.draw_image(image, title=path.name)
                 self.status.setText(f"Previewing {path.name}")
             except Exception as exc:
@@ -891,7 +899,15 @@ def create_app_class(qt):
             mode = self.selected_mode()
 
             try:
-                result = analyze_image(path, self.config, mode=mode)
+                cached_record = self.current_record if path == self.current_image_path else None
+                cached_image = self.current_raw_image if cached_record is not None else None
+                result = analyze_image(
+                    path,
+                    self.config,
+                    mode=mode,
+                    record=cached_record,
+                    image=cached_image,
+                )
                 self.current_result = result
                 self.draw_image(result.display_image, title=result.title, peaks=result.peak_array)
                 self.show_result(result)
