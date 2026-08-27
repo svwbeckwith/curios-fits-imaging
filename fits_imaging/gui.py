@@ -361,6 +361,53 @@ def create_app_class(qt):
             self.show()
             self.raise_()
 
+        def show_location(self, image, x, y, config, cutout_size=DEFAULT_CUTOUT_SIZE, title=""):
+            """Inspect an arbitrary image location without a detected peak."""
+            image = np.asarray(image)
+            if image.ndim != 2 or image.size == 0:
+                return
+
+            x = float(np.clip(x, 0, image.shape[1] - 1))
+            y = float(np.clip(y, 0, image.shape[0] - 1))
+            cutout = peak_cutout(image, (x, y), cutout_size=cutout_size)
+
+            self.figure.clear()
+            ax = self.figure.add_subplot(111)
+            vmin, vmax = cutout_display_limits(cutout["image"], config=config)
+            shown = apply_stretch(
+                cutout["image"],
+                vmin=vmin,
+                vmax=vmax,
+                stretch=getattr(config, "cutout_stretch", "linear"),
+            )
+            cmap = getattr(config, "cutout_colormap", None) or getattr(config, "colormap", "viridis")
+            if getattr(config, "invert_colormap", False) and not cmap.endswith("_r"):
+                cmap += "_r"
+            ax.imshow(
+                shown,
+                origin=IMAGE_ORIGIN,
+                vmin=0,
+                vmax=1,
+                cmap=cmap,
+                extent=cutout_extent(cutout),
+            )
+            ax.plot(x, y, marker="+", markersize=22, markeredgewidth=4, color="black", linestyle="none")
+            ax.plot(x, y, marker="+", markersize=18, markeredgewidth=2.5, color="cyan", linestyle="none")
+            label = f"Location: x={x:.2f}, y={y:.2f}"
+            ax.set_title(f"{title} — {label}" if title else label)
+            ax.set_xlim(cutout["x0"] - 0.5, cutout["x1"] - 0.5)
+            ax.set_ylim(cutout["y1"] - 0.5, cutout["y0"] - 0.5)
+            ax.set_xlabel("X pixel")
+            ax.set_ylabel("Y pixel")
+            self.figure.tight_layout()
+            self.canvas.draw_idle()
+            self.details.setText(
+                f"Manual inspection at x={x:.2f}, y={y:.2f}; "
+                f"cutout {cutout['image'].shape[1]} x {cutout['image'].shape[0]} pixels."
+            )
+            self.show()
+            self.raise_()
+
     class ImagingWorkbench(QMainWindow):
         """Small desktop workbench for browsing and analyzing one observing folder."""
 
@@ -377,9 +424,11 @@ def create_app_class(qt):
             self.current_display_image = None
             self.current_display_title = ""
             self.current_display_peaks = None
+            self.manual_inspection_location = None
 
             self.config = ImagingConfig()
             self._build_ui()
+            self.canvas.mpl_connect("button_press_event", self.on_main_image_click)
 
         def _build_ui(self):
             root = QWidget()
@@ -469,6 +518,26 @@ def create_app_class(qt):
             self.cutout_size.valueChanged.connect(self.refresh_selected_peak)
             right.addWidget(QLabel("Peak cutout size"))
             right.addWidget(self.cutout_size)
+
+            inspect_row = QHBoxLayout()
+            self.inspect_x = QDoubleSpinBox()
+            self.inspect_x.setRange(0.0, 1.0e9)
+            self.inspect_x.setDecimals(2)
+            self.inspect_y = QDoubleSpinBox()
+            self.inspect_y.setRange(0.0, 1.0e9)
+            self.inspect_y.setDecimals(2)
+            inspect_button = QPushButton("Inspect X/Y")
+            inspect_button.clicked.connect(self.inspect_coordinates)
+            inspect_row.addWidget(QLabel("X"))
+            inspect_row.addWidget(self.inspect_x)
+            inspect_row.addWidget(QLabel("Y"))
+            inspect_row.addWidget(self.inspect_y)
+            right.addLayout(inspect_row)
+            right.addWidget(inspect_button)
+
+            self.inspect_clicks = QCheckBox("Click main image to inspect")
+            self.inspect_clicks.setChecked(False)
+            right.addWidget(self.inspect_clicks)
 
             right.addWidget(QLabel("Main image brightness"))
             self.main_preset = QComboBox()
@@ -610,6 +679,7 @@ def create_app_class(qt):
             self.current_display_image = None
             self.current_display_title = ""
             self.current_display_peaks = None
+            self.manual_inspection_location = None
             self.clear_peak_table()
             self.figure.clear()
             self.canvas.draw_idle()
@@ -671,12 +741,14 @@ def create_app_class(qt):
             self.current_display_image = image
             self.current_display_title = title
             self.current_display_peaks = peaks
+            ny, nx = image.shape
+            self.inspect_x.setMaximum(max(float(nx - 1), 0.0))
+            self.inspect_y.setMaximum(max(float(ny - 1), 0.0))
             self.figure.clear()
             ax = self.figure.add_subplot(111)
             vmin, vmax = display_limits(image, config=self.config)
             image_sample, stride = _display_sample(image)
             display_image = apply_stretch(image_sample, vmin=vmin, vmax=vmax, stretch=self.config.stretch)
-            ny, nx = image.shape
             ax.imshow(
                 display_image,
                 origin=IMAGE_ORIGIN,
@@ -890,6 +962,10 @@ def create_app_class(qt):
             self.show_peak_window(peak_index)
 
         def refresh_selected_peak(self):
+            if self.manual_inspection_location is not None:
+                self.show_inspection_location(*self.manual_inspection_location)
+                return
+
             if self.current_result is None:
                 return
 
@@ -906,12 +982,52 @@ def create_app_class(qt):
             if self.peak_window is None:
                 self.peak_window = PeakWindow(self)
 
+            self.manual_inspection_location = None
             self.peak_window.show_peak(
                 self.current_result,
                 peak_index,
                 self.config,
                 cutout_size=self.cutout_size.value(),
             )
+
+        def inspect_coordinates(self):
+            """Open Peak Inspector at the typed main-image coordinates."""
+            self.show_inspection_location(self.inspect_x.value(), self.inspect_y.value())
+
+        def on_main_image_click(self, event):
+            """Inspect a clicked main-image location when click mode is enabled."""
+            if not self.inspect_clicks.isChecked() or event.inaxes is None:
+                return
+            if event.xdata is None or event.ydata is None:
+                return
+            self.inspect_x.setValue(event.xdata)
+            self.inspect_y.setValue(event.ydata)
+            self.show_inspection_location(event.xdata, event.ydata)
+
+        def show_inspection_location(self, x, y):
+            """Show an arbitrary location from the current preview or result."""
+            image = self.current_display_image
+            if image is None:
+                self.status.setText("Select an image before inspecting coordinates.")
+                return
+
+            ny, nx = image.shape
+            x = float(np.clip(x, 0, nx - 1))
+            y = float(np.clip(y, 0, ny - 1))
+            self.inspect_x.setValue(x)
+            self.inspect_y.setValue(y)
+            self.manual_inspection_location = (x, y)
+            if self.peak_window is None:
+                self.peak_window = PeakWindow(self)
+            self.peak_window.show_location(
+                image,
+                x,
+                y,
+                self.config,
+                cutout_size=self.cutout_size.value(),
+                title=self.current_display_title,
+            )
+            self.status.setText(f"Inspecting x={x:.2f}, y={y:.2f}")
 
         def export_summary(self):
             if self.current_result is None:

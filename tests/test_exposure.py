@@ -4,6 +4,7 @@ from astropy.io import fits
 from fits_imaging.analysis import analyze_image
 from fits_imaging.config import ImagingConfig
 from fits_imaging.fits_io import parse_sum_frame_count, read_fits_image
+from fits_imaging.photometry import counts_to_mag
 from fits_imaging.run import ImagingRun
 
 
@@ -53,7 +54,7 @@ def test_run_metadata_includes_exposure_accounting(tmp_path):
     assert run.file_table.loc[0, "total_exposure_sec"] == 0.1
 
 
-def test_analysis_uses_total_exposure_for_photometry(tmp_path):
+def test_analysis_uses_single_frame_exposure_for_combined_image_photometry(tmp_path):
     path = tmp_path / "M15_2026-06-29_CuED_5_sum.fits"
     hdu = fits.PrimaryHDU(data=np.ones((3, 3)))
     hdu.header["EXPTIME"] = 0.02
@@ -63,4 +64,23 @@ def test_analysis_uses_total_exposure_for_photometry(tmp_path):
 
     assert result.exposure_sec == 0.02
     assert result.total_exposure_sec == 0.1
-    assert result.photometry_exposure_sec == 0.1
+    assert result.photometry_exposure_sec == 0.02
+
+
+def test_combined_image_magnitude_is_not_dimmed_by_frame_count(tmp_path):
+    single_path = tmp_path / "M15_single.fits"
+    sum_path = tmp_path / "M15_10_sum.fits"
+    for path in (single_path, sum_path):
+        hdu = fits.PrimaryHDU(data=np.ones((3, 3)))
+        hdu.header["EXPTIME"] = 0.02
+        hdu.writeto(path)
+
+    config = ImagingConfig(data_root=tmp_path)
+    single = analyze_image(single_path, config, mode="statistics")
+    combined = analyze_image(sum_path, config, mode="statistics")
+
+    assert single.photometry_exposure_sec == combined.photometry_exposure_sec == 0.02
+    assert combined.total_exposure_sec == 0.2
+    single_mag = counts_to_mag(1000.0, single.photometry_exposure_sec)
+    combined_mag = counts_to_mag(1000.0, combined.photometry_exposure_sec)
+    assert combined_mag == single_mag

@@ -182,7 +182,10 @@ def _stats_result(image_path, config, mode, extra_stats=None):
             "peak_find_time_sec": 0.0,
             "frame_count": record.frame_count,
             "total_exposure_sec": record.total_exposure_sec,
-            "photometry_exposure_sec": record.total_exposure_sec,
+            # Combined CuRIOS products retain the count scale of one input
+            # frame. Normalize fitted flux by the per-frame exposure; retain
+            # total_exposure_sec separately for observing metadata.
+            "photometry_exposure_sec": record.exposure_sec,
             "exposure_source": record.exposure_source,
             "pa_calc_deg": _pa_calc(record),
         }
@@ -276,7 +279,7 @@ def analyze_image(image_path, config, mode=None):
     stats["npeaks"] = len(peaksarray)
     stats["frame_count"] = record.frame_count
     stats["total_exposure_sec"] = record.total_exposure_sec
-    stats["photometry_exposure_sec"] = record.total_exposure_sec
+    stats["photometry_exposure_sec"] = record.exposure_sec
     stats["exposure_source"] = record.exposure_source
     stats.update(_region_stats(imagec, config))
 
