@@ -2,10 +2,32 @@ import importlib.util
 
 import numpy as np
 import pytest
+from astropy.io import fits
 from types import SimpleNamespace
 
 from fits_imaging import gui
 from fits_imaging.config import ImagingConfig
+from fits_imaging.fits_io import read_fits_headers
+
+
+def test_read_fits_headers_preserves_hdus_card_order_and_repeated_cards(tmp_path):
+    path = tmp_path / "headers.fits"
+    primary = fits.PrimaryHDU()
+    primary.header["OBSERVER"] = ("Ada", "Observer name")
+    primary.header.add_history("first processing step")
+    primary.header.add_history("second processing step")
+    science = fits.ImageHDU(np.ones((3, 4)), name="SCI")
+    science.header["EXPTIME"] = 15.0
+    fits.HDUList([primary, science]).writeto(path)
+
+    headers = read_fits_headers(path)
+
+    assert len(headers) == 2
+    assert headers[1]["name"] == "SCI"
+    assert headers[1]["type"] == "ImageHDU"
+    assert any(card["keyword"] == "OBSERVER" and card["value"] == "Ada" for card in headers[0]["cards"])
+    history = [card["value"] for card in headers[0]["cards"] if card["keyword"] == "HISTORY"]
+    assert history == ["first processing step", "second processing step"]
 
 
 def test_gui_module_imports_without_pyside6():

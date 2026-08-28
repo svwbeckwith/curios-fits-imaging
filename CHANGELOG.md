@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add an optional, searchable FITS-header window to the GUI with multi-HDU
+  navigation and clipboard copying, without decoding compressed image data.
 - Read all three CuRIOS 32-bit JPEG-LS container revisions (historical 2-byte
   and 4-byte headers plus the current length-and-baseline header), using JPEG-LS
   marker validation to reject corrupt or ambiguous tiles.

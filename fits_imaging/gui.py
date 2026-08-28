@@ -10,7 +10,7 @@ import pandas as pd
 from .analysis import analyze_image, normalize_analysis_mode
 from .config import ImagingConfig
 from .contrast import apply_stretch, cutout_display_limits, display_limits, percentile_limits
-from .fits_io import read_fits_image
+from .fits_io import read_fits_headers, read_fits_image
 from .photometry import counts_to_mag
 from .run import ImagingRun
 
@@ -252,6 +252,7 @@ def configure_main_display(
 
 
 def create_app_class(qt):
+    QApplication = qt["QApplication"]
     Qt = qt["Qt"]
     QCheckBox = qt["QCheckBox"]
     QComboBox = qt["QComboBox"]
@@ -270,6 +271,104 @@ def create_app_class(qt):
     QWidget = qt["QWidget"]
     FigureCanvasQTAgg = qt["FigureCanvasQTAgg"]
     Figure = qt["Figure"]
+
+    class HeaderWindow(QMainWindow):
+        """Searchable, copyable display of all headers in one FITS file."""
+
+        def __init__(self, parent=None):
+            super().__init__(parent)
+            self.setWindowTitle("FITS Header")
+            self.resize(1000, 650)
+            self.headers = []
+
+            root = QWidget()
+            self.setCentralWidget(root)
+            layout = QVBoxLayout(root)
+
+            self.filename = QLabel("No FITS file selected.")
+            self.filename.setWordWrap(True)
+            layout.addWidget(self.filename)
+
+            controls = QHBoxLayout()
+            controls.addWidget(QLabel("Header unit"))
+            self.hdu_combo = QComboBox()
+            self.hdu_combo.currentIndexChanged.connect(self.populate_cards)
+            controls.addWidget(self.hdu_combo, 1)
+            controls.addWidget(QLabel("Find"))
+            self.search_text = QLineEdit()
+            self.search_text.setPlaceholderText("keyword, value, or comment")
+            self.search_text.textChanged.connect(self.filter_cards)
+            controls.addWidget(self.search_text, 1)
+            copy_button = QPushButton("Copy selected rows")
+            copy_button.clicked.connect(self.copy_selected_rows)
+            controls.addWidget(copy_button)
+            layout.addLayout(controls)
+
+            self.table = QTableWidget()
+            self.table.setColumnCount(4)
+            self.table.setHorizontalHeaderLabels(["#", "Keyword", "Value", "Comment"])
+            self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+            self.table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
+            layout.addWidget(self.table, 1)
+
+        def show_file(self, path):
+            path = Path(path)
+            self.headers = read_fits_headers(path)
+            self.filename.setText(str(path))
+            self.setWindowTitle(f"FITS Header — {path.name}")
+
+            self.hdu_combo.blockSignals(True)
+            self.hdu_combo.clear()
+            for header in self.headers:
+                name = header["name"] or "unnamed"
+                self.hdu_combo.addItem(
+                    f"HDU {header['index']}: {name} ({header['type']}, "
+                    f"{len(header['cards'])} cards)"
+                )
+            self.hdu_combo.blockSignals(False)
+            self.hdu_combo.setCurrentIndex(0 if self.headers else -1)
+            self.populate_cards()
+            self.show()
+            self.raise_()
+
+        def populate_cards(self, *_args):
+            self.table.setRowCount(0)
+            index = self.hdu_combo.currentIndex()
+            if index < 0 or index >= len(self.headers):
+                return
+
+            cards = self.headers[index]["cards"]
+            self.table.setRowCount(len(cards))
+            for row, card in enumerate(cards):
+                values = (card["position"], card["keyword"], card["value"], card["comment"])
+                for column, value in enumerate(values):
+                    self.table.setItem(row, column, _table_item(qt, value))
+            self.table.resizeColumnsToContents()
+            self.filter_cards()
+
+        def filter_cards(self, *_args):
+            query = self.search_text.text().strip().casefold()
+            for row in range(self.table.rowCount()):
+                searchable = " ".join(
+                    self.table.item(row, column).text()
+                    for column in range(1, self.table.columnCount())
+                    if self.table.item(row, column) is not None
+                ).casefold()
+                self.table.setRowHidden(row, bool(query and query not in searchable))
+
+        def copy_selected_rows(self):
+            rows = sorted({index.row() for index in self.table.selectionModel().selectedRows()})
+            lines = []
+            for row in rows:
+                lines.append(
+                    "\t".join(
+                        self.table.item(row, column).text()
+                        if self.table.item(row, column) is not None else ""
+                        for column in range(self.table.columnCount())
+                    )
+                )
+            if lines:
+                QApplication.clipboard().setText("\n".join(lines))
 
     class PeakWindow(QMainWindow):
         """Separate source-inspection window."""
@@ -423,6 +522,7 @@ def create_app_class(qt):
             self.current_raw_image = None
             self.current_result = None
             self.peak_window = None
+            self.header_window = None
             self.current_display_image = None
             self.current_display_title = ""
             self.current_display_peaks = None
@@ -455,7 +555,12 @@ def create_app_class(qt):
             self.file_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
             self.file_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
             self.file_table.itemSelectionChanged.connect(self.on_file_selection_changed)
-            left.addWidget(QLabel("Files"))
+            file_header = QHBoxLayout()
+            file_header.addWidget(QLabel("Files"))
+            header_button = QPushButton("Show FITS header")
+            header_button.clicked.connect(self.show_fits_header)
+            file_header.addWidget(header_button)
+            left.addLayout(file_header)
             left.addWidget(self.file_table, 1)
             content.addLayout(left, 2)
 
@@ -724,6 +829,20 @@ def create_app_class(qt):
             if index < 0 or index >= len(files):
                 return None
             return files[index]
+
+        def show_fits_header(self):
+            """Open the selected file's FITS metadata in a separate window."""
+            path = self.current_image_path or self.selected_path()
+            if path is None:
+                self.status.setText("Select a FITS file before opening its header.")
+                return
+
+            try:
+                if self.header_window is None:
+                    self.header_window = HeaderWindow(self)
+                self.header_window.show_file(path)
+            except Exception as exc:
+                self.show_error("Could not read FITS header", exc)
 
         def on_file_selection_changed(self):
             path = self.selected_path()

@@ -34,6 +34,40 @@ class ImageRecord:
     softname: str = ""
 
 
+def read_fits_headers(path: Union[str, Path]):
+    """Return ordered header cards for every HDU without decoding image data.
+
+    Astropy loads HDU headers lazily and does not decode compressed tiles until
+    ``hdu.data`` is accessed.  Keeping the normal compressed-image view here
+    presents the logical image header instead of its storage-table internals.
+    """
+    path = Path(path).expanduser()
+    headers = []
+
+    with fits.open(path, memmap=True) as hdul:
+        for index, hdu in enumerate(hdul):
+            cards = []
+            for position, card in enumerate(hdu.header.cards, start=1):
+                cards.append(
+                    {
+                        "position": position,
+                        "keyword": str(card.keyword),
+                        "value": str(card.value),
+                        "comment": str(card.comment or ""),
+                    }
+                )
+            headers.append(
+                {
+                    "index": index,
+                    "name": str(hdu.name or ""),
+                    "type": type(hdu).__name__,
+                    "cards": cards,
+                }
+            )
+
+    return headers
+
+
 def _normalized_extensions(extensions: Iterable[str]) -> Tuple[str, ...]:
     return tuple(ext.lower() if ext.startswith(".") else "." + ext.lower() for ext in extensions)
 
